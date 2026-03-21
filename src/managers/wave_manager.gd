@@ -4,7 +4,6 @@
 ## @version: 1.0.0
 
 extends Node
-class_name WaveManager
 
 # =============================================================================
 # 信号定义
@@ -53,9 +52,6 @@ const MAX_ACTIVE_ENEMIES: int = 50
 ## 生成范围
 const SPAWN_MIN_DISTANCE: float = 300.0
 const SPAWN_MAX_DISTANCE: float = 500.0
-
-## 玩家引用路径
-const PLAYER_PATH: String = "/root/Main/Player"
 
 # =============================================================================
 # 枚举定义
@@ -123,6 +119,9 @@ var is_paused: bool = false
 ## 玩家引用
 var player: Node = null
 
+## 敌人容器（由 game.gd 设置）
+var entities_container: Node = null
+
 # =============================================================================
 # 私有变量
 # =============================================================================
@@ -133,25 +132,20 @@ var _enemies_to_spawn: int = 0
 var _break_timer: float = 0.0
 var _spawn_queue: Array[Dictionary] = []
 
-# 敌人场景引用
-var _enemy_scenes: Dictionary = {}
+# 敌人脚本引用
+var _enemy_scripts: Dictionary = {}
 
 # =============================================================================
 # 生命周期方法
 # =============================================================================
 
 func _ready() -> void:
-	"""
-	节点就绪时初始化
-	"""
+	"""节点就绪时初始化"""
 	_initialize_manager()
 
 
 func _process(delta: float) -> void:
-	"""
-	每帧更新
-	@param delta: 帧间隔时间
-	"""
+	"""每帧更新"""
 	if is_paused or not enabled:
 		return
 	
@@ -170,26 +164,26 @@ func _process(delta: float) -> void:
 
 ## 初始化管理器
 func initialize() -> void:
-	"""
-	手动初始化波次管理器
-	"""
+	"""手动初始化波次管理器"""
 	_initialize_manager()
 
 
 ## 设置玩家引用
 func set_player(player_node: Node) -> void:
-	"""
-	设置玩家引用
-	@param player_node: 玩家节点
-	"""
+	"""设置玩家引用"""
 	player = player_node
+	print("[WaveManager] 玩家引用已设置")
+
+
+## 设置敌人容器
+func set_entities_container(container: Node) -> void:
+	"""设置敌人容器"""
+	entities_container = container
 
 
 ## 开始游戏
 func start_game() -> void:
-	"""
-	开始游戏，启动第一波
-	"""
+	"""开始游戏，启动第一波"""
 	if not enabled:
 		return
 	
@@ -204,17 +198,13 @@ func start_game() -> void:
 
 ## 开始下一波
 func start_next_wave() -> void:
-	"""
-	开始下一波
-	"""
+	"""开始下一波"""
 	_start_next_wave()
 
 
 ## 跳过休息
 func skip_break() -> void:
-	"""
-	跳过休息时间
-	"""
+	"""跳过休息时间"""
 	if current_state == WaveState.BREAK:
 		_break_timer = 0
 		_end_break()
@@ -222,35 +212,26 @@ func skip_break() -> void:
 
 ## 暂停波次
 func pause_wave() -> void:
-	"""
-	暂停波次
-	"""
+	"""暂停波次"""
 	is_paused = true
 
 
 ## 恢复波次
 func resume_wave() -> void:
-	"""
-	恢复波次
-	"""
+	"""恢复波次"""
 	is_paused = false
 
 
 ## 强制完成当前波次
 func force_complete_wave() -> void:
-	"""
-	强制完成当前波次（清除所有敌人）
-	"""
+	"""强制完成当前波次（清除所有敌人）"""
 	_clear_all_enemies()
 	_complete_wave()
 
 
 ## 获取剩余敌人数量
 func get_remaining_enemies() -> int:
-	"""
-	获取当前波次剩余敌人数量
-	@return: 剩余敌人数量
-	"""
+	"""获取当前波次剩余敌人数量"""
 	return active_enemies.size()
 
 # =============================================================================
@@ -259,10 +240,7 @@ func get_remaining_enemies() -> int:
 
 ## 敌人死亡通知
 func on_enemy_died(enemy: Node) -> void:
-	"""
-	敌人死亡时调用
-	@param enemy: 死亡的敌人
-	"""
+	"""敌人死亡时调用"""
 	enemies_killed_this_wave += 1
 	
 	# 从活跃列表移除
@@ -275,21 +253,13 @@ func on_enemy_died(enemy: Node) -> void:
 
 ## 生成特定敌人
 func spawn_specific_enemy(enemy_type: String, position: Vector2) -> Node:
-	"""
-	在指定位置生成特定类型的敌人
-	@param enemy_type: 敌人类型
-	@param position: 生成位置
-	@return: 生成的敌人节点
-	"""
+	"""在指定位置生成特定类型的敌人"""
 	return _spawn_enemy(enemy_type, position)
 
 
 ## 生成精英
 func spawn_elite() -> Node:
-	"""
-	生成精英敌人
-	@return: 精英敌人节点
-	"""
+	"""生成精英敌人"""
 	var spawn_pos: Vector2 = _get_spawn_position()
 	var elite: Node = _spawn_enemy("elite", spawn_pos)
 	
@@ -304,10 +274,7 @@ func spawn_elite() -> Node:
 
 ## 获取波次信息
 func get_wave_info() -> Dictionary:
-	"""
-	获取当前波次信息
-	@return: 波次信息字典
-	"""
+	"""获取当前波次信息"""
 	return {
 		"wave": current_wave,
 		"state": WaveState.keys()[current_state],
@@ -321,10 +288,7 @@ func get_wave_info() -> Dictionary:
 
 ## 获取难度系数
 func get_difficulty_multiplier() -> float:
-	"""
-	获取当前难度系数
-	@return: 难度倍率
-	"""
+	"""获取当前难度系数"""
 	return 1.0 + (current_wave - 1) * 0.05
 
 # =============================================================================
@@ -332,9 +296,7 @@ func get_difficulty_multiplier() -> float:
 # =============================================================================
 
 func _initialize_manager() -> void:
-	"""
-	初始化管理器内部状态
-	"""
+	"""初始化管理器内部状态"""
 	current_state = WaveState.IDLE
 	current_wave = 0
 	enemies_killed_this_wave = 0
@@ -344,44 +306,50 @@ func _initialize_manager() -> void:
 	# 查找玩家
 	_find_player()
 	
-	# 加载敌人场景
-	_load_enemy_scenes()
+	# 加载敌人脚本
+	_load_enemy_scripts()
+	
+	# 查找敌人容器
+	_find_entities_container()
+	
+	print("[WaveManager] 初始化完成")
 
 
 func _find_player() -> void:
-	"""
-	查找玩家节点
-	"""
-	# 尝试多种方式查找玩家
-	player = get_node_or_null(PLAYER_PATH)
-	
-	if player == null:
-		# 尝试从组中获取
-		var players: Array[Node] = get_tree().get_nodes_in_group("players")
-		if not players.is_empty():
-			player = players[0]
+	"""查找玩家节点"""
+	# 尝试从组中获取
+	var players: Array[Node] = get_tree().get_nodes_in_group("players")
+	if not players.is_empty():
+		player = players[0]
+		print("[WaveManager] 找到玩家")
 
 
-func _load_enemy_scenes() -> void:
-	"""
-	加载敌人场景
-	"""
-	# 预加载敌人脚本
-	_enemy_scenes = {
+func _find_entities_container() -> void:
+	"""查找敌人容器"""
+	# 尝试从场景中查找
+	var main = get_tree().current_scene
+	if main:
+		entities_container = main.get_node_or_null("GameWorld/Entities")
+		if entities_container == null:
+			entities_container = main.get_node_or_null("Entities")
+
+
+func _load_enemy_scripts() -> void:
+	"""加载敌人脚本"""
+	_enemy_scripts = {
 		"melee": preload("res://src/enemies/enemy_melee.gd"),
 		"ranged": preload("res://src/enemies/enemy_ranged.gd"),
 		"tank": preload("res://src/enemies/enemy_tank.gd"),
 		"elite": preload("res://src/enemies/enemy_elite.gd")
 	}
+	print("[WaveManager] 敌人脚本已加载")
 
 # =============================================================================
 # 私有方法 - 波次控制
 # =============================================================================
 
 func _start_next_wave() -> void:
-	"""
-	开始下一波
-	"""
+	"""开始下一波"""
 	current_wave += 1
 	enemies_killed_this_wave = 0
 	
@@ -401,32 +369,29 @@ func _start_next_wave() -> void:
 	wave_started.emit(current_wave)
 	
 	# 更新游戏管理器
-	GameManager.current_wave = current_wave
+	GameManager.set_wave(current_wave)
 	
 	# 播放音效
 	AudioManager.play_sfx("wave_start", 0.8)
+	
+	print("[WaveManager] 第 %d 波开始，敌人数量: %d" % [current_wave, wave_enemy_count])
 
 
 func _calculate_enemy_count() -> int:
-	"""
-	计算当前波次的敌人数量
-	@return: 敌人数量
-	"""
+	"""计算当前波次的敌人数量"""
 	return BASE_ENEMY_COUNT + (current_wave - 1) * ENEMY_INCREMENT
 
 
 func _prepare_spawn_queue() -> void:
-	"""
-	准备生成队列
-	"""
+	"""准备生成队列"""
 	_spawn_queue.clear()
 	
 	var enemy_count: int = wave_enemy_count
 	var difficulty: float = get_difficulty_multiplier()
 	
 	# 计算各类型敌人数量
-	var melee_count: int = int(enemy_count * 0.5)  # 50% 近战
-	var ranged_count: int = int(enemy_count * 0.3)  # 30% 远程
+	var melee_count: int = int(enemy_count * 0.6)  # 60% 近战
+	var ranged_count: int = int(enemy_count * 0.25)  # 25% 远程
 	var tank_count: int = int(enemy_count * 0.1)  # 10% 坦克
 	var elite_count: int = 0
 	
@@ -458,9 +423,7 @@ func _prepare_spawn_queue() -> void:
 
 
 func _shuffle_spawn_queue() -> void:
-	"""
-	随机打乱生成队列
-	"""
+	"""随机打乱生成队列"""
 	var shuffled: Array[Dictionary] = []
 	while _spawn_queue.size() > 0:
 		var index: int = randi() % _spawn_queue.size()
@@ -473,10 +436,7 @@ func _shuffle_spawn_queue() -> void:
 # =============================================================================
 
 func _update_spawning(delta: float) -> void:
-	"""
-	更新生成状态
-	@param delta: 帧间隔时间
-	"""
+	"""更新生成状态"""
 	_spawn_timer -= delta
 	
 	if _spawn_timer <= 0 and _spawn_queue.size() > 0:
@@ -498,10 +458,7 @@ func _update_spawning(delta: float) -> void:
 
 
 func _update_break(delta: float) -> void:
-	"""
-	更新休息状态
-	@param delta: 帧间隔时间
-	"""
+	"""更新休息状态"""
 	_break_timer -= delta
 	
 	if _break_timer <= 0:
@@ -509,18 +466,13 @@ func _update_break(delta: float) -> void:
 
 
 func _update_active(_delta: float) -> void:
-	"""
-	更新活跃状态
-	@param _delta: 帧间隔时间
-	"""
+	"""更新活跃状态"""
 	# 检查波次完成
 	_check_wave_completion()
 
 
 func _check_wave_completion() -> void:
-	"""
-	检查波次是否完成
-	"""
+	"""检查波次是否完成"""
 	if current_state == WaveState.SPAWNING and _spawn_queue.is_empty() and active_enemies.is_empty():
 		_complete_wave()
 	elif current_state == WaveState.ACTIVE and active_enemies.is_empty():
@@ -528,9 +480,7 @@ func _check_wave_completion() -> void:
 
 
 func _complete_wave() -> void:
-	"""
-	完成当前波次
-	"""
+	"""完成当前波次"""
 	current_state = WaveState.BREAK
 	_break_timer = break_duration
 	
@@ -541,6 +491,8 @@ func _complete_wave() -> void:
 	# 播放音效
 	AudioManager.play_sfx("wave_complete", 0.8)
 	
+	print("[WaveManager] 第 %d 波完成" % current_wave)
+	
 	# 检查是否达到最大波次
 	if not endless_mode and current_wave >= max_wave:
 		# 游戏胜利
@@ -549,9 +501,7 @@ func _complete_wave() -> void:
 
 
 func _end_break() -> void:
-	"""
-	结束休息
-	"""
+	"""结束休息"""
 	current_state = WaveState.IDLE
 	break_ended.emit()
 	_start_next_wave()
@@ -561,11 +511,7 @@ func _end_break() -> void:
 # =============================================================================
 
 func _spawn_single_enemy(spawn_data: Dictionary) -> Node:
-	"""
-	生成单个敌人
-	@param spawn_data: 生成数据
-	@return: 敌人节点
-	"""
+	"""生成单个敌人"""
 	var enemy_type: String = spawn_data.get("type", "melee")
 	var difficulty: float = spawn_data.get("difficulty", 1.0)
 	var spawn_pos: Vector2 = _get_spawn_position()
@@ -585,22 +531,20 @@ func _spawn_single_enemy(spawn_data: Dictionary) -> Node:
 
 
 func _spawn_enemy(enemy_type: String, position: Vector2) -> Node:
-	"""
-	生成敌人
-	@param enemy_type: 敌人类型
-	@param position: 生成位置
-	@return: 敌人节点
-	"""
-	var enemy_script: GDScript = _enemy_scenes.get(enemy_type)
+	"""生成敌人"""
+	var enemy_script: GDScript = _enemy_scripts.get(enemy_type)
 	if enemy_script == null:
-		enemy_script = _enemy_scenes["melee"]
+		enemy_script = _enemy_scripts["melee"]
 	
-	var enemy: Node2D = Node2D.new()
+	# 创建敌人节点
+	var enemy: CharacterBody2D = CharacterBody2D.new()
 	enemy.set_script(enemy_script)
 	enemy.global_position = position
+	enemy.name = "Enemy_%s_%d" % [enemy_type, randi() % 10000]
 	
 	# 添加碰撞形状
 	var collision: CollisionShape2D = CollisionShape2D.new()
+	collision.name = "CollisionShape2D"
 	var shape: CircleShape2D = CircleShape2D.new()
 	shape.radius = 12.0
 	collision.shape = shape
@@ -608,39 +552,56 @@ func _spawn_enemy(enemy_type: String, position: Vector2) -> Node:
 	
 	# 添加视觉效果（根据类型）
 	var sprite: Sprite2D = Sprite2D.new()
+	sprite.name = "Sprite"
 	var texture: ImageTexture = ImageTexture.new()
-	var image: Image = Image.create(24, 24, false, Image.FORMAT_RGBA8)
+	var image: Image
 	
-	# 根据类型设置颜色
+	# 根据类型设置颜色和大小
 	var color: Color = Color.RED
 	match enemy_type:
 		"melee":
 			color = Color(0.8, 0.2, 0.2)
+			image = Image.create(24, 24, false, Image.FORMAT_RGBA8)
 		"ranged":
 			color = Color(0.2, 0.6, 0.8)
+			image = Image.create(20, 20, false, Image.FORMAT_RGBA8)
 		"tank":
 			color = Color(0.5, 0.5, 0.5)
+			image = Image.create(32, 32, false, Image.FORMAT_RGBA8)
 		"elite":
 			color = Color(0.8, 0.5, 0.1)
-			image = Image.create(32, 32, false, Image.FORMAT_RGBA8)
+			image = Image.create(36, 36, false, Image.FORMAT_RGBA8)
+		_:
+			image = Image.create(24, 24, false, Image.FORMAT_RGBA8)
 	
 	image.fill(color)
 	texture.set_image(image)
 	sprite.texture = texture
 	enemy.add_child(sprite)
 	
-	# 添加到场景
-	get_tree().current_scene.add_child(enemy)
+	# 确定添加到哪个容器
+	var container: Node = entities_container
+	if container == null:
+		# 查找容器
+		var main = get_tree().current_scene
+		if main:
+			container = main.get_node_or_null("GameWorld/Entities")
+			if container == null:
+				container = main
+	
+	if container:
+		container.add_child(enemy)
+	else:
+		get_tree().current_scene.add_child(enemy)
+	
+	print("[WaveManager] 生成敌人: %s 于 %s" % [enemy_type, position])
 	
 	return enemy
 
 
 func _get_spawn_position() -> Vector2:
-	"""
-	获取生成位置
-	@return: 生成位置
-	"""
-	var center: Vector2 = Vector2.ZERO
+	"""获取生成位置"""
+	var center: Vector2 = Vector2(576, 320)  # 默认屏幕中心
 	
 	# 以玩家为中心
 	if player and is_instance_valid(player):
@@ -656,14 +617,11 @@ func _get_spawn_position() -> Vector2:
 	
 	var spawn_pos: Vector2 = center + Vector2(cos(angle), sin(angle)) * distance
 	
-	# 可以添加地图边界检查
 	return spawn_pos
 
 
 func _clear_all_enemies() -> void:
-	"""
-	清除所有活跃敌人
-	"""
+	"""清除所有活跃敌人"""
 	for enemy in active_enemies:
 		if is_instance_valid(enemy):
 			enemy.queue_free()

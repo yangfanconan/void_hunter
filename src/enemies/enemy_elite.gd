@@ -1,10 +1,9 @@
-## Void Hunter - 精英怪
-## @description: 拥有特殊技能、高掉落的精英敌人
+## Void Hunter - 精英敌人
+## @description: 强化的精英敌人，具有更高的属性和特殊能力
 ## @author: Void Hunter Team
 ## @version: 1.0.0
 
-extends EnemyBase
-class_name EnemyElite
+extends "res://src/enemies/enemy_base.gd"
 
 # =============================================================================
 # 信号定义
@@ -14,442 +13,338 @@ class_name EnemyElite
 signal skill_used(skill_name: String)
 
 # =============================================================================
+# 常量定义
+# =============================================================================
+
+## 默认精英速度
+const ELITE_SPEED: float = 90.0
+
+## 默认精英生命值
+const ELITE_HEALTH: float = 120.0
+
+## 默认精英伤害
+const ELITE_DAMAGE: float = 20.0
+
+## 默认精英攻击范围
+const ELITE_ATTACK_RANGE: float = 50.0
+
+## 默认精英攻击冷却
+const ELITE_ATTACK_COOLDOWN: float = 1.5
+
+## 技能冷却时间
+const SKILL_COOLDOWN: float = 8.0
+
+# =============================================================================
 # 枚举定义
 # =============================================================================
 
 ## 精英技能类型
 enum EliteSkill {
 	DASH_ATTACK,	## 冲刺攻击
-	SUMMON,		## 召唤小怪
-	TELEPORT,	## 瞬移
-	BERSERK		## 狂暴
+	WHIRLWIND,		## 旋风斩
+	SUMMON,			## 召唤小怪
+	HEAL			## 自我治疗
 }
 
 # =============================================================================
 # 导出变量
 # =============================================================================
 
-## 可用技能列表
-@export var available_skills: Array[EliteSkill] = [EliteSkill.DASH_ATTACK]
+## 精英技能
+@export var elite_skill: EliteSkill = EliteSkill.DASH_ATTACK
 
-## 技能冷却
-@export var skill_cooldown: float = 5.0
+## 技能冷却时间
+@export_range(5.0, 15.0) var skill_cooldown: float = SKILL_COOLDOWN
 
-## 冲刺攻击距离
-@export var dash_attack_distance: float = 150.0
+## 冲刺速度倍率
+@export_range(2.0, 4.0) var dash_speed_multiplier: float = 3.0
 
-## 冲刺攻击伤害
-@export var dash_attack_damage: float = 25.0
+## 旋风斩范围
+@export_range(50.0, 150.0) var whirlwind_range: float = 80.0
 
-## 召唤数量
-@export var summon_count: int = 3
+## 旋风斩伤害
+@export var whirlwind_damage: float = 15.0
 
-## 狂暴攻击加成
-@export var berserk_attack_bonus: float = 0.5
-
-## 狂暴速度加成
-@export var berserk_speed_bonus: float = 0.3
-
-## 狂暴触发血量百分比
-@export_range(0.0, 1.0) var berserk_health_threshold: float = 0.3
-
-# =============================================================================
-# 公共变量
-# =============================================================================
-
-## 是否处于狂暴状态
-var is_berserking: bool = false
+## 治疗量
+@export var heal_amount: float = 30.0
 
 # =============================================================================
 # 私有变量
 # =============================================================================
 
-var _skill_timer: float = 0.0
+var _skill_cooldown_timer: float = 0.0
 var _is_using_skill: bool = false
-var _current_skill: EliteSkill = EliteSkill.DASH_ATTACK
+var _is_dashing: bool = false
+var _dash_direction: Vector2 = Vector2.ZERO
+var _dash_timer: float = 0.0
+var _whirlwind_timer: float = 0.0
 
 # =============================================================================
 # 生命周期方法
 # =============================================================================
 
 func _ready() -> void:
-	"""
-	节点就绪时初始化
-	"""
-	# 设置精英敌人属性
-	enemy_type = EnemyType.ELITE
-	enemy_name = "精英怪"
-	
-	# 高血量
-	max_health = 100.0
-	current_health = max_health
-	
-	# 中等速度
-	move_speed = 90.0
-	
-	# 高伤害
-	attack_damage = 15.0
-	attack_cooldown = 1.2
-	
-	# 攻击范围
-	attack_range = 60.0
-	detection_range = 300.0
-	
-	# 高掉落
-	experience_reward = 50
-	gold_reward = 25
-	drop_chance = 0.5
-	
+	"""节点就绪时初始化"""
+	_setup_elite_stats()
 	super._ready()
 
 
 func _physics_process(delta: float) -> void:
-	"""
-	物理帧更新
-	@param delta: 帧间隔时间
-	"""
+	"""物理帧更新"""
 	# 更新技能冷却
-	if _skill_timer > 0:
-		_skill_timer -= delta
+	if _skill_cooldown_timer > 0:
+		_skill_cooldown_timer -= delta
 	
-	# 检查狂暴
-	_check_berserk()
+	# 处理冲刺
+	if _is_dashing:
+		_update_dash(delta)
+		return
 	
+	# 处理旋风斩
+	if _whirlwind_timer > 0:
+		_update_whirlwind(delta)
+		return
+	
+	# 调用父类处理
 	super._physics_process(delta)
 
 # =============================================================================
-# 重写方法
+# 公共方法
 # =============================================================================
 
-func take_damage(amount: float, source: Node = null) -> void:
-	"""
-	受到伤害 - 检查狂暴触发
-	"""
-	super.take_damage(amount, source)
-	
-	# 检查狂暴
-	_check_berserk()
-
-
-func _handle_attack_state(_delta: float) -> void:
-	"""
-	处理攻击状态 - 可能使用技能
-	"""
-	if current_target == null or not is_instance_valid(current_target):
-		clear_target()
+## 使用技能
+func use_skill() -> void:
+	"""使用精英技能"""
+	if _is_using_skill or _skill_cooldown_timer > 0:
 		return
 	
-	var distance_to_target: float = global_position.distance_to(current_target.global_position)
-	
-	# 目标离开攻击范围
-	if distance_to_target > attack_range * 2.0:
-		set_state(EnemyState.CHASE)
-		return
-	
-	# 面向目标
-	facing_direction = (current_target.global_position - global_position).normalized()
-	
-	# 检查是否使用技能
-	if _skill_timer <= 0 and not _is_using_skill and not _is_attacking:
-		var skill: EliteSkill = _choose_skill(distance_to_target)
-		if skill != EliteSkill.DASH_ATTACK or distance_to_target <= dash_attack_distance:
-			_use_skill(skill)
-			return
-	
-	# 普通攻击
-	if _attack_timer <= 0 and not _is_attacking and not _is_using_skill:
-		_perform_attack()
-
-# =============================================================================
-# 私有方法 - 狂暴
-# =============================================================================
-
-func _check_berserk() -> void:
-	"""
-	检查是否触发狂暴
-	"""
-	if is_berserking:
-		return
-	
-	var health_percent: float = current_health / max_health
-	if health_percent <= berserk_health_threshold:
-		_enter_berserk()
-
-
-func _enter_berserk() -> void:
-	"""
-	进入狂暴状态
-	"""
-	is_berserking = true
-	
-	# 应用加成
-	attack_damage *= (1.0 + berserk_attack_bonus)
-	move_speed *= (1.0 + berserk_speed_bonus)
-	
-	# 视觉效果
-	_play_berserk_effect()
-	
-	# 触发信号
-	skill_used.emit("berserk")
-	
-	# 播放音效
-	AudioManager.play_sfx("elite_berserk", 0.9)
-
-
-func _play_berserk_effect() -> void:
-	"""
-	播放狂暴效果
-	"""
-	# 身体变红
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1.5, 0.5, 0.5), 0.3)
-	
-	# 放大效果
-	tween = create_tween()
-	tween.tween_property(self, "scale", Vector2(1.2, 1.2), 0.2)
-	tween.tween_property(self, "scale", Vector2(1.1, 1.1), 0.1)
-
-# =============================================================================
-# 私有方法 - 技能
-# =============================================================================
-
-func _choose_skill(distance: float) -> EliteSkill:
-	"""
-	根据距离选择技能
-	@param distance: 到目标的距离
-	@return: 选择的技能
-	"""
-	if available_skills.is_empty():
-		return EliteSkill.DASH_ATTACK
-	
-	# 根据距离选择合适的技能
-	for skill in available_skills:
-		match skill:
-			EliteSkill.DASH_ATTACK:
-				if distance <= dash_attack_distance and distance > attack_range:
-					return skill
-			EliteSkill.SUMMON:
-				if distance <= attack_range * 2:
-					return skill
-			EliteSkill.TELEPORT:
-				if distance > attack_range * 2:
-					return skill
-			EliteSkill.BERSERK:
-				if not is_berserking:
-					return skill
-	
-	# 默认返回第一个可用技能
-	return available_skills[0]
-
-
-func _use_skill(skill: EliteSkill) -> void:
-	"""
-	使用技能
-	@param skill: 技能类型
-	"""
 	_is_using_skill = true
-	_skill_timer = skill_cooldown
-	_current_skill = skill
 	
-	match skill:
+	match elite_skill:
 		EliteSkill.DASH_ATTACK:
-			await _use_dash_attack()
+			_perform_dash_attack()
+		EliteSkill.WHIRLWIND:
+			_perform_whirlwind()
 		EliteSkill.SUMMON:
-			await _use_summon()
-		EliteSkill.TELEPORT:
-			await _use_teleport()
-		EliteSkill.BERSERK:
-			_enter_berserk()
+			_perform_summon()
+		EliteSkill.HEAL:
+			_perform_heal()
+
+
+## 设置精英属性
+func setup_elite(speed: float, health: float, damage: float) -> void:
+	"""设置精英敌人属性"""
+	move_speed = speed
+	max_health = health
+	attack_damage = damage
+	current_health = max_health
+
+# =============================================================================
+# 私有方法 - 初始化
+# =============================================================================
+
+func _setup_elite_stats() -> void:
+	"""设置精英敌人属性"""
+	# 如果使用默认值，则设置精英专用属性
+	if move_speed == DEFAULT_SPEED:
+		move_speed = ELITE_SPEED
+	if max_health == DEFAULT_MAX_HEALTH:
+		max_health = ELITE_HEALTH
+	if attack_damage == DEFAULT_ATTACK_DAMAGE:
+		attack_damage = ELITE_DAMAGE
+	if attack_range == DEFAULT_ATTACK_RANGE:
+		attack_range = ELITE_ATTACK_RANGE
+	if attack_cooldown == 1.0:
+		attack_cooldown = ELITE_ATTACK_COOLDOWN
 	
-	_is_using_skill = false
-	skill_used.emit(EliteSkill.keys()[skill])
+	# 设置敌人类型
+	enemy_type = EnemyType.ELITE
+	
+	# 设置经验值和金币奖励
+	experience_reward = 50
+	gold_reward = 30
+	
+	# 旋风斩伤害
+	whirlwind_damage = attack_damage * 0.75
+	
+	print("[EnemyElite] 初始化完成，技能: %d" % elite_skill)
 
+# =============================================================================
+# 私有方法 - 技能实现
+# =============================================================================
 
-func _use_dash_attack() -> void:
-	"""
-	使用冲刺攻击
-	"""
-	if current_target == null:
+func _perform_dash_attack() -> void:
+	"""执行冲刺攻击"""
+	if target == null or not is_instance_valid(target):
+		_is_using_skill = false
 		return
 	
-	# 记录目标位置
-	var target_pos: Vector2 = current_target.global_position
-	var dash_direction: Vector2 = (target_pos - global_position).normalized()
+	_is_dashing = true
+	_dash_direction = (target.global_position - global_position).normalized()
+	_dash_timer = 0.5
 	
-	# 前摇动画
-	_play_skill_windup()
-	await get_tree().create_timer(0.3).timeout
-	
-	# 冲刺
-	var dash_speed: float = move_speed * 5.0
-	var dash_time: float = 0.3
-	var elapsed: float = 0.0
-	var start_pos: Vector2 = global_position
-	
-	while elapsed < dash_time:
-		elapsed += get_physics_process_delta_time()
-		global_position = start_pos + dash_direction * dash_speed * elapsed
-		await get_tree().physics_frame
-	
-	# 对路径上的目标造成伤害
-	_deal_dash_damage(target_pos, dash_direction)
-	
-	# 结束动画
-	_play_skill_end()
+	skill_used.emit("dash_attack")
+	print("[EnemyElite] 使用冲刺攻击")
 
 
-func _deal_dash_damage(end_pos: Vector2, _direction: Vector2) -> void:
-	"""
-	对冲刺路径上的目标造成伤害
-	"""
-	var players: Array[Node] = get_tree().get_nodes_in_group("players")
-	for player in players:
-		if not is_instance_valid(player):
-			continue
-		
-		var distance: float = global_position.distance_to(player.global_position)
-		if distance <= 50.0:
-			if player.has_method("take_damage"):
-				player.take_damage(dash_attack_damage, self)
+func _perform_whirlwind() -> void:
+	"""执行旋风斩"""
+	_whirlwind_timer = 1.0
+	velocity = Vector2.ZERO
+	
+	skill_used.emit("whirlwind")
+	print("[EnemyElite] 使用旋风斩")
+	
+	# 旋风斩期间持续造成伤害
+	# 在 _update_whirlwind 中处理
 
 
-func _use_summon() -> void:
-	"""
-	使用召唤技能
-	"""
-	# 播放召唤动画
-	_play_summon_animation()
+func _perform_summon() -> void:
+	"""执行召唤"""
+	skill_used.emit("summon")
+	print("[EnemyElite] 使用召唤")
 	
-	await get_tree().create_timer(0.5).timeout
-	
-	# 召唤小怪
-	for i in range(summon_count):
+	# 召唤2个小怪
+	for i in range(2):
 		_spawn_minion()
-		await get_tree().create_timer(0.2).timeout
+	
+	_skill_cooldown_timer = skill_cooldown
+	_is_using_skill = false
+
+
+func _perform_heal() -> void:
+	"""执行自我治疗"""
+	skill_used.emit("heal")
+	print("[EnemyElite] 使用治疗")
+	
+	heal(heal_amount)
+	
+	# 治疗特效
+	modulate = Color(0.5, 1.0, 0.5)
+	await get_tree().create_timer(0.3).timeout
+	modulate = Color.WHITE
+	
+	_skill_cooldown_timer = skill_cooldown
+	_is_using_skill = false
+
+# =============================================================================
+# 私有方法 - 更新
+# =============================================================================
+
+func _update_dash(delta: float) -> void:
+	"""更新冲刺"""
+	_dash_timer -= delta
+	velocity = _dash_direction * move_speed * dash_speed_multiplier
+	move_and_slide()
+	
+	# 检测碰撞
+	var collision: KinematicCollision2D = get_last_slide_collision()
+	if collision:
+		var collider: Node = collision.get_collider()
+		if collider and collider.is_in_group("players"):
+			if collider.has_method("take_damage"):
+				collider.take_damage(attack_damage * 1.5, self)
+	
+	if _dash_timer <= 0:
+		_is_dashing = false
+		_is_using_skill = false
+		_skill_cooldown_timer = skill_cooldown
+
+
+func _update_whirlwind(delta: float) -> void:
+	"""更新旋风斩"""
+	_whirlwind_timer -= delta
+	
+	# 旋转动画
+	rotation += delta * 10.0
+	
+	# 每隔一段时间造成伤害
+	if int(_whirlwind_timer * 10) % 3 == 0:
+		_deal_whirlwind_damage()
+	
+	if _whirlwind_timer <= 0:
+		rotation = 0
+		_is_using_skill = false
+		_skill_cooldown_timer = skill_cooldown
+
+
+func _deal_whirlwind_damage() -> void:
+	"""造成旋风斩伤害"""
+	var players: Array[Node] = get_tree().get_nodes_in_group("players")
+	for player_node in players:
+		if player_node and is_instance_valid(player_node):
+			var dist: float = global_position.distance_to(player_node.global_position)
+			if dist <= whirlwind_range:
+				if player_node.has_method("take_damage"):
+					player_node.take_damage(whirlwind_damage, self)
 
 
 func _spawn_minion() -> void:
-	"""
-	生成小怪
-	"""
-	var minion: EnemyMelee = EnemyMelee.new()
+	"""召唤小怪"""
+	var minion: CharacterBody2D = CharacterBody2D.new()
+	minion.set_script(preload("res://src/enemies/enemy_melee.gd"))
+	minion.name = "EliteMinion"
 	
-	# 设置位置（在精英周围）
+	# 在精英周围随机位置生成
 	var angle: float = randf() * TAU
-	var distance: float = randf_range(50.0, 100.0)
-	minion.global_position = global_position + Vector2(cos(angle), sin(angle)) * distance
+	var dist: float = randf_range(50.0, 100.0)
+	minion.global_position = global_position + Vector2(cos(angle), sin(angle)) * dist
 	
-	# 设置属性（较弱的小怪）
-	minion.max_health = 20.0
-	minion.current_health = 20.0
-	minion.attack_damage = 5.0
-	minion.experience_reward = 3
+	# 降低小怪属性
+	minion.set("max_health", 15.0)
+	minion.set("move_speed", 70.0)
+	minion.set("attack_damage", 5.0)
 	
-	# 添加碰撞
+	# 添加碰撞形状
 	var collision: CollisionShape2D = CollisionShape2D.new()
 	var shape: CircleShape2D = CircleShape2D.new()
-	shape.radius = 12.0
+	shape.radius = 10.0
 	collision.shape = shape
 	minion.add_child(collision)
 	
-	# 添加视觉效果
+	# 添加视觉表现
 	var sprite: Sprite2D = Sprite2D.new()
 	var texture: ImageTexture = ImageTexture.new()
 	var image: Image = Image.create(16, 16, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0.6, 0.3, 0.3))
+	image.fill(Color(0.6, 0.3, 0.1))
 	texture.set_image(image)
 	sprite.texture = texture
 	minion.add_child(sprite)
 	
 	# 添加到场景
-	get_tree().current_scene.add_child(minion)
-	
-	# 设置目标
-	if current_target != null:
-		minion.set_target(current_target)
-
-
-func _use_teleport() -> void:
-	"""
-	使用瞬移技能
-	"""
-	if current_target == null:
-		return
-	
-	# 播放消失动画
-	_play_teleport_start()
-	await get_tree().create_timer(0.3).timeout
-	
-	# 瞬移到目标背后
-	var target_pos: Vector2 = current_target.global_position
-	var behind_direction: Vector2 = -facing_direction
-	var teleport_pos: Vector2 = target_pos + behind_direction * 50.0
-	
-	global_position = teleport_pos
-	
-	# 播放出现动画
-	_play_teleport_end()
-
-
-func _play_skill_windup() -> void:
-	"""
-	播放技能前摇动画
-	"""
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1.5, 1.5, 0), 0.2)
-	tween.parallel().tween_property(self, "scale", Vector2(1.15, 1.15), 0.2)
-
-
-func _play_skill_end() -> void:
-	"""
-	播放技能结束动画
-	"""
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "modulate", Color(1.5, 0.5, 0.5) if is_berserking else Color.WHITE, 0.2)
-	tween.parallel().tween_property(self, "scale", Vector2(1.1, 1.1) if is_berserking else Vector2.ONE, 0.2)
-
-
-func _play_summon_animation() -> void:
-	"""
-	播放召唤动画
-	"""
-	modulate = Color(0.8, 0.4, 1.0)
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "scale", Vector2(1.2, 1.2), 0.2)
-	tween.tween_property(self, "scale", Vector2.ONE, 0.3)
-	await tween.finished
-	modulate = Color(1.5, 0.5, 0.5) if is_berserking else Color.WHITE
-
-
-func _play_teleport_start() -> void:
-	"""
-	播放瞬移开始动画
-	"""
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "modulate:a", 0.0, 0.2)
-	tween.parallel().tween_property(self, "scale", Vector2(0.5, 0.5), 0.2)
-
-
-func _play_teleport_end() -> void:
-	"""
-	播放瞬移结束动画
-	"""
-	scale = Vector2(0.5, 0.5)
-	modulate.a = 0.0
-	
-	var tween: Tween = create_tween()
-	tween.tween_property(self, "modulate:a", 1.0, 0.2)
-	tween.parallel().tween_property(self, "scale", Vector2(1.1, 1.1) if is_berserking else Vector2.ONE, 0.2)
+	var entities_container: Node = get_tree().current_scene.get_node_or_null("GameWorld/Entities")
+	if entities_container:
+		entities_container.add_child(minion)
+	else:
+		get_tree().current_scene.add_child(minion)
 
 # =============================================================================
-# 对象池接口
+# 重写父类方法
 # =============================================================================
 
-func on_spawn() -> void:
-	"""
-	从对象池取出时的初始化
-	"""
-	super.on_spawn()
-	_skill_timer = 0.0
-	_is_using_skill = false
-	is_berserking = false
+func _update_chase(delta: float) -> void:
+	"""更新追击状态"""
+	# 检查是否可以使用技能
+	if _skill_cooldown_timer <= 0 and target and is_instance_valid(target):
+		var dist: float = global_position.distance_to(target.global_position)
+		# 在合适距离使用技能
+		if dist <= 150.0 and dist >= 50.0:
+			use_skill()
+			return
+	
+	# 调用父类处理
+	super._update_chase(delta)
+
+# =============================================================================
+# 视觉效果
+# =============================================================================
+
+func _update_visuals() -> void:
+	"""更新视觉效果"""
+	super._update_visuals()
+	
+	# 精英有金色光环
+	if not _is_using_skill:
+		modulate = Color(1.0, 0.9, 0.7)
+	else:
+		modulate = Color.WHITE

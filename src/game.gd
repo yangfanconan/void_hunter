@@ -1,298 +1,605 @@
+## Void Hunter - 游戏主控制器
+## @description: 管理游戏状态、初始化玩家、启动波次系统
+## @author: Void Hunter Team
+## @version: 1.0.0
+
 extends Node
 
 const VERSION := "1.0.0"
-const GAME_NAME := "Void Hunter: Endless Journey"
+const GAME_NAME := "Void Hunter"
 
-enum GameState { LOADING, MAIN_MENU, CHARACTER_SELECT, PLAYING, PAUSED, GAME_OVER }
+enum GameState { LOADING, MAIN_MENU, PLAYING, PAUSED, GAME_OVER }
+
+# =============================================================================
+# 导出变量
+# =============================================================================
+
+## 玩家场景引用
+@export var player_scene: PackedScene = null
+
+## 调试模式
+@export var debug_mode: bool = false
+
+# =============================================================================
+# 公共变量
+# =============================================================================
 
 var current_state: GameState = GameState.LOADING
-var previous_state: GameState = GameState.LOADING
+var _is_initialized: bool = false
 
-signal state_changed(new_state: GameState)
-signal game_started()
-signal game_paused()
-signal game_resumed()
-signal game_over(stats: Dictionary)
+## 当前玩家实例
+var player: Node = null
+
+## 波次管理器
+var wave_manager: Node = null
+
+## 游戏时间
+var game_time: float = 0.0
+
+## 总击杀数
+var total_kills: int = 0
+
+# =============================================================================
+# 节点引用
+# =============================================================================
 
 @onready var _main_menu: Control = $CanvasLayer/MainMenu
 @onready var _game_world: Node2D = $GameWorld
 @onready var _hud: Control = $HUD
 @onready var _pause_menu: Control = $PauseMenu
+@onready var _player_spawn: Marker2D = $GameWorld/PlayerSpawn
 @onready var _entities: Node2D = $GameWorld/Entities
-@onready var _level_container: Node2D = $GameWorld/LevelGenerator
+@onready var _projectiles: Node2D = $GameWorld/Projectiles
+@onready var _level_container: Node2D = $GameWorld/LevelContainer
 
-var _player: Node2D = null
-var _current_level: Node = null
-var _is_initialized: bool = false
+# =============================================================================
+# 信号定义
+# =============================================================================
+
+signal game_started()
+signal game_paused()
+signal game_resumed()
+signal player_died()
+signal wave_completed(wave_number: int)
+
+# =============================================================================
+# 生命周期方法
+# =============================================================================
 
 func _ready() -> void:
-	_setup_input_actions()
-	await _initialize_systems()
-	_change_state(GameState.MAIN_MENU)
+	"""节点就绪时初始化"""
+	await get_tree().process_frame
+	_setup_signals()
+	_setup_level_background()
+	_show_main_menu()
 	_is_initialized = true
 	print("[Game] %s v%s 初始化完成" % [GAME_NAME, VERSION])
 
-func _setup_input_actions() -> void:
-	var actions := {
-		"ui_up": [KEY_W, KEY_UP],
-		"ui_down": [KEY_S, KEY_DOWN],
-		"ui_left": [KEY_A, KEY_LEFT],
-		"ui_right": [KEY_D, KEY_RIGHT],
-		"attack": [MOUSE_BUTTON_LEFT, KEY_SPACE],
-		"dash": [KEY_SHIFT],
-		"skill_1": [KEY_1, KEY_Q],
-		"skill_2": [KEY_2, KEY_E],
-		"skill_3": [KEY_3, KEY_R],
-		"skill_4": [KEY_4],
-		"item_1": [KEY_Z],
-		"item_2": [KEY_X],
-		"item_3": [KEY_C],
-		"inventory": [KEY_I, KEY_TAB],
-		"pause": [KEY_ESCAPE],
-		"toggle_auto_fire": [KEY_T],
-	}
-	
-	for action_name: String in actions:
-		if not InputMap.has_action(action_name):
-			InputMap.add_action(action_name)
-			for key in actions[action_name]:
-				var event: InputEvent
-				if key is int:
-					if key >= KEY_A and key <= KEY_Z or key in [KEY_SPACE, KEY_SHIFT, KEY_TAB, KEY_ESCAPE]:
-						event = InputEventKey.new()
-						event.keycode = key
-					elif key >= MOUSE_BUTTON_LEFT and key <= MOUSE_BUTTON_RIGHT:
-						event = InputEventMouseButton.new()
-						event.button_index = key
-					if event:
-						InputMap.action_add_event(action_name, event)
 
-func _initialize_systems() -> void:
-	await get_tree().process_frame
-	
-	if GameManager:
-		GameManager.set_game_reference(self)
-	
-	if ObjectPool:
-		ObjectPool.warm_up_pools()
-	
-	if InputManager:
-		InputManager.input_device_changed.connect(_on_input_device_changed)
-	
-	if RenderOptimizer:
-		RenderOptimizer.set_target_fps(60)
-	
-	if MemoryManager:
-		MemoryManager.low_memory_warning.connect(_on_low_memory)
-	
-	await get_tree().create_timer(0.1).timeout
+func _process(delta: float) -> void:
+	"""每帧更新"""
+	if current_state == GameState.PLAYING:
+		game_time += delta
 
-func _change_state(new_state: GameState) -> void:
-	if current_state == new_state:
-		return
-	
-	previous_state = current_state
-	current_state = new_state
-	
-	match new_state:
-		GameState.MAIN_MENU:
-			_show_main_menu()
-		GameState.CHARACTER_SELECT:
-			_show_character_select()
-		GameState.PLAYING:
-			_start_gameplay()
-		GameState.PAUSED:
-			_pause_gameplay()
-		GameState.GAME_OVER:
-			_show_game_over()
-		GameState.LOADING:
-			pass
-	
-	state_changed.emit(new_state)
-	print("[Game] 状态切换: %s -> %s" % [GameState.keys()[previous_state], GameState.keys()[new_state]])
-
-func _show_main_menu() -> void:
-	get_tree().paused = false
-	_main_menu.visible = true
-	_game_world.visible = false
-	_hud.visible = false
-	_pause_menu.visible = false
-	
-	if _player:
-		_player.queue_free()
-		_player = null
-	
-	if _current_level:
-		_current_level.queue_free()
-		_current_level = null
-	
-	if _entities:
-		for child in _entities.get_children():
-			child.queue_free()
-
-func _show_character_select() -> void:
-	_main_menu.visible = false
-	if GameManager:
-		GameManager.start_character_selection()
-
-func _start_gameplay() -> void:
-	get_tree().paused = false
-	_main_menu.visible = false
-	_game_world.visible = true
-	_hud.visible = true
-	_pause_menu.visible = false
-	
-	if not _player:
-		_spawn_player()
-	
-	if not _current_level:
-		_generate_level()
-	
-	game_started.emit()
-
-func _pause_gameplay() -> void:
-	get_tree().paused = true
-	_pause_menu.visible = true
-	game_paused.emit()
-
-func _show_game_over() -> void:
-	get_tree().paused = true
-	var stats := _collect_game_stats()
-	game_over.emit(stats)
-
-func _spawn_player() -> void:
-	var player_scene := preload("res://scenes/player.tscn")
-	if player_scene:
-		_player = player_scene.instantiate()
-		var spawn_pos: Vector2 = Vector2(576, 320)
-		if $GameWorld/PlayerSpawn:
-			spawn_pos = $GameWorld/PlayerSpawn.position
-		_player.position = spawn_pos
-		_entities.add_child(_player)
-		print("[Game] 玩家生成完成")
-
-func _generate_level() -> void:
-	if LevelManager:
-		LevelManager.start_new_game()
-		_current_level = LevelManager.get_current_level_node()
-		if _current_level and _level_container:
-			_level_container.add_child(_current_level)
-	print("[Game] 关卡生成完成")
-
-func _collect_game_stats() -> Dictionary:
-	var stats := {
-		"survival_time": 0.0,
-		"waves_reached": 1,
-		"kills": 0,
-		"damage_dealt": 0,
-		"items_collected": 0,
-		"skills_unlocked": 0,
-	}
-	
-	if GameManager:
-		stats.waves_reached = GameManager.current_wave
-		stats.kills = GameManager.total_kills
-	
-	return stats
-
-func _on_input_device_changed(device_type: int) -> void:
-	var device_name := ["PC", "Mobile", "Gamepad"][device_type] if device_type < 3 else "Unknown"
-	print("[Game] 输入设备切换: %s" % device_name)
-
-func _on_low_memory() -> void:
-	print("[Game] 收到低内存警告，执行清理...")
-	if MemoryManager:
-		MemoryManager.force_cleanup()
-
-func _on_main_menu_new_game() -> void:
-	_change_state(GameState.CHARACTER_SELECT)
-
-func _on_main_menu_continue() -> void:
-	if SaveManager and SaveManager.has_save():
-		SaveManager.load_game()
-		_change_state(GameState.PLAYING)
-	else:
-		print("[Game] 没有存档")
-
-func _on_main_menu_settings() -> void:
-	pass
-
-func _on_main_menu_quit() -> void:
-	get_tree().quit()
-
-func _on_character_selected(character_id: String) -> void:
-	if GameManager:
-		GameManager.select_character_and_start(character_id)
-	_change_state(GameState.PLAYING)
-
-func _on_pause_resume() -> void:
-	_change_state(GameState.PLAYING)
-
-func _on_pause_settings() -> void:
-	pass
-
-func _on_pause_main_menu() -> void:
-	_change_state(GameState.MAIN_MENU)
-
-func _on_game_over_restart() -> void:
-	_change_state(GameState.CHARACTER_SELECT)
-
-func _on_game_over_main_menu() -> void:
-	_change_state(GameState.MAIN_MENU)
 
 func _input(event: InputEvent) -> void:
+	"""处理输入事件"""
 	if not _is_initialized:
 		return
 	
 	if event.is_action_pressed("pause"):
 		if current_state == GameState.PLAYING:
-			_change_state(GameState.PAUSED)
+			_pause_game()
 		elif current_state == GameState.PAUSED:
-			_change_state(GameState.PLAYING)
-		get_viewport().set_input_as_handled()
+			_resume_game()
 
-func _notification(what: int) -> void:
-	match what:
-		NOTIFICATION_WM_GO_BACK_REQUEST:
-			if current_state == GameState.PLAYING:
-				_change_state(GameState.PAUSED)
-			elif current_state == GameState.PAUSED:
-				_change_state(GameState.MAIN_MENU)
-		NOTIFICATION_WM_CLOSE_REQUEST:
-			if SaveManager and current_state == GameState.PLAYING:
-				SaveManager.auto_save()
+# =============================================================================
+# 公共方法 - 游戏控制
+# =============================================================================
 
+## 开始新游戏
 func start_new_game() -> void:
-	_change_state(GameState.CHARACTER_SELECT)
+	"""开始新游戏"""
+	_start_game()
 
-func continue_game() -> void:
-	_change_state(GameState.PLAYING)
 
+## 暂停游戏
 func pause_game() -> void:
-	if current_state == GameState.PLAYING:
-		_change_state(GameState.PAUSED)
+	"""暂停游戏"""
+	_pause_game()
 
+
+## 恢复游戏
 func resume_game() -> void:
-	if current_state == GameState.PAUSED:
-		_change_state(GameState.PLAYING)
+	"""恢复游戏"""
+	_resume_game()
 
-func end_game() -> void:
-	_change_state(GameState.GAME_OVER)
 
-func get_current_state() -> GameState:
-	return current_state
+## 返回主菜单
+func return_to_main_menu() -> void:
+	"""返回主菜单"""
+	_cleanup_game()
+	_show_main_menu()
 
-func is_playing() -> bool:
-	return current_state == GameState.PLAYING
 
-func is_paused() -> bool:
-	return current_state == GameState.PAUSED
+## 获取玩家引用
+func get_player() -> Node:
+	"""获取当前玩家实例"""
+	return player
 
-func get_player() -> Node2D:
-	return _player
 
-func get_entities_node() -> Node2D:
+## 获取游戏时间
+func get_game_time() -> float:
+	"""获取游戏时间"""
+	return game_time
+
+
+## 获取总击杀数
+func get_total_kills() -> int:
+	"""获取总击杀数"""
+	return total_kills
+
+
+## 玩家死亡处理
+func handle_player_death() -> void:
+	"""处理玩家死亡"""
+	current_state = GameState.GAME_OVER
+	player_died.emit()
+	
+	# 显示游戏结束界面
+	_show_game_over()
+
+
+## 敌人击杀记录
+func record_enemy_kill() -> void:
+	"""记录敌人击杀"""
+	total_kills += 1
+
+# =============================================================================
+# 私有方法 - 初始化
+# =============================================================================
+
+func _setup_signals() -> void:
+	"""设置信号连接"""
+	# 主菜单按钮
+	var new_game_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonNewGame")
+	var continue_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonContinue")
+	var settings_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonSettings")
+	var quit_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonQuit")
+	
+	if new_game_btn and not new_game_btn.pressed.is_connected(_on_new_game_pressed):
+		new_game_btn.pressed.connect(_on_new_game_pressed)
+	if continue_btn and not continue_btn.pressed.is_connected(_on_continue_pressed):
+		continue_btn.pressed.connect(_on_continue_pressed)
+	if settings_btn and not settings_btn.pressed.is_connected(_on_settings_pressed):
+		settings_btn.pressed.connect(_on_settings_pressed)
+	if quit_btn and not quit_btn.pressed.is_connected(_on_quit_pressed):
+		quit_btn.pressed.connect(_on_quit_pressed)
+	
+	# 暂停菜单按钮
+	var resume_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonResume")
+	var pause_settings_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonSettings")
+	var main_menu_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonMainMenu")
+	
+	if resume_btn and not resume_btn.pressed.is_connected(_on_pause_resume):
+		resume_btn.pressed.connect(_on_pause_resume)
+	if pause_settings_btn and not pause_settings_btn.pressed.is_connected(_on_pause_settings):
+		pause_settings_btn.pressed.connect(_on_pause_settings)
+	if main_menu_btn and not main_menu_btn.pressed.is_connected(_on_pause_main_menu):
+		main_menu_btn.pressed.connect(_on_pause_main_menu)
+
+
+func _setup_level_background() -> void:
+	"""设置关卡背景（简单的地板）"""
+	# 创建地板背景
+	var floor_bg = ColorRect.new()
+	floor_bg.name = "FloorBackground"
+	floor_bg.color = Color(0.15, 0.15, 0.2, 1.0)  # 深灰色背景
+	floor_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	floor_bg.custom_minimum_size = Vector2(2000, 2000)
+	floor_bg.position = Vector2(-500, -500)
+	floor_bg.z_index = -10
+	
+	# 添加到关卡容器
+	_level_container.add_child(floor_bg)
+	
+	# 创建网格线效果
+	_create_grid_lines()
+
+
+func _create_grid_lines() -> void:
+	"""创建网格线效果"""
+	var grid_size := 64
+	var grid_color := Color(0.2, 0.2, 0.25, 0.5)
+	var line_width := 1.0
+	
+	# 创建一个大的网格节点
+	var grid_node := Node2D.new()
+	grid_node.name = "GridLines"
+	grid_node.z_index = -5
+	_level_container.add_child(grid_node)
+	
+	# 使用 Line2D 创建网格
+	for x in range(-10, 30):
+		var line := Line2D.new()
+		line.add_point(Vector2(x * grid_size, -500))
+		line.add_point(Vector2(x * grid_size, 1500))
+		line.width = line_width
+		line.default_color = grid_color
+		grid_node.add_child(line)
+	
+	for y in range(-10, 30):
+		var line := Line2D.new()
+		line.add_point(Vector2(-500, y * grid_size))
+		line.add_point(Vector2(1500, y * grid_size))
+		line.width = line_width
+		line.default_color = grid_color
+		grid_node.add_child(line)
+
+# =============================================================================
+# 私有方法 - 游戏流程
+# =============================================================================
+
+func _show_main_menu() -> void:
+	"""显示主菜单"""
+	_main_menu.visible = true
+	_game_world.visible = false
+	_hud.visible = false
+	_pause_menu.visible = false
+	current_state = GameState.MAIN_MENU
+
+
+func _start_game() -> void:
+	"""开始游戏"""
+	print("[Game] 开始游戏...")
+	
+	# 隐藏主菜单
+	_main_menu.visible = false
+	_game_world.visible = true
+	_hud.visible = true
+	_pause_menu.visible = false
+	
+	# 重置游戏状态
+	game_time = 0.0
+	total_kills = 0
+	
+	# 创建玩家
+	_spawn_player()
+	
+	# 创建波次管理器
+	_setup_wave_manager()
+	
+	# 设置 HUD
+	_setup_hud()
+	
+	# 设置游戏状态
+	current_state = GameState.PLAYING
+	game_started.emit()
+	
+	print("[Game] 游戏开始完成")
+
+
+func _spawn_player() -> void:
+	"""生成玩家"""
+	# 如果已有玩家，先清理
+	if player and is_instance_valid(player):
+		player.queue_free()
+	
+	# 创建玩家
+	if player_scene:
+		player = player_scene.instantiate()
+	else:
+		# 动态创建玩家
+		player = _create_player_instance()
+	
+	# 设置玩家位置
+	if _player_spawn:
+		player.global_position = _player_spawn.global_position
+	else:
+		player.global_position = Vector2(576, 320)  # 默认屏幕中心
+	
+	# 添加到实体节点
+	_entities.add_child(player)
+	
+	# 连接玩家信号
+	_connect_player_signals()
+	
+	print("[Game] 玩家已生成于: ", player.global_position)
+
+
+func _create_player_instance() -> CharacterBody2D:
+	"""动态创建玩家实例"""
+	var player_node := CharacterBody2D.new()
+	player_node.set_script(preload("res://src/player/player.gd"))
+	player_node.name = "Player"
+	
+	# 创建玩家属性
+	var stats := PlayerStats.new()
+	stats.initialize()
+	player_node.set("stats", stats)
+	
+	# 添加碰撞形状
+	var collision := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius = 12.0
+	collision.shape = shape
+	player_node.add_child(collision)
+	
+	# 添加视觉表现
+	var sprite := Sprite2D.new()
+	var texture := ImageTexture.new()
+	var image := Image.create(24, 24, false, Image.FORMAT_RGBA8)
+	# 绘制简单的玩家图形（绿色圆形）
+	image.fill(Color(0.2, 0.8, 0.3))
+	texture.set_image(image)
+	sprite.texture = texture
+	player_node.add_child(sprite)
+	
+	# 添加瞄准指示器
+	var aim_indicator := Node2D.new()
+	aim_indicator.name = "AimIndicator"
+	player_node.add_child(aim_indicator)
+	
+	return player_node
+
+
+func _connect_player_signals() -> void:
+	"""连接玩家信号"""
+	if not player:
+		return
+	
+	# 连接受伤信号
+	if player.has_signal("damaged"):
+		player.damaged.connect(_on_player_damaged)
+	
+	# 连接死亡信号
+	if player.has_signal("died"):
+		player.died.connect(_on_player_died)
+	
+	# 连接属性变化信号
+	if player.has_signal("stats_changed"):
+		player.stats_changed.connect(_on_player_stats_changed)
+	
+	# 连接升级信号
+	if player.has_signal("leveled_up"):
+		player.leveled_up.connect(_on_player_leveled_up)
+
+
+func _setup_wave_manager() -> void:
+	"""设置波次管理器"""
+	# 查找现有波次管理器
+	wave_manager = get_node_or_null("GameWorld/WaveManager")
+	
+	if wave_manager == null:
+		# 创建新的波次管理器
+		wave_manager = Node.new()
+		wave_manager.set_script(preload("res://src/managers/wave_manager.gd"))
+		wave_manager.name = "WaveManager"
+		_game_world.add_child(wave_manager)
+	
+	# 设置玩家引用
+	if wave_manager.has_method("set_player"):
+		wave_manager.set_player(player)
+	
+	# 连接波次信号
+	if wave_manager.has_signal("wave_started"):
+		wave_manager.wave_started.connect(_on_wave_started)
+	if wave_manager.has_signal("wave_completed"):
+		wave_manager.wave_completed.connect(_on_wave_completed)
+	if wave_manager.has_signal("enemy_spawned"):
+		wave_manager.enemy_spawned.connect(_on_enemy_spawned)
+	
+	# 启动波次
+	if wave_manager.has_method("start_game"):
+		wave_manager.start_game()
+	
+	print("[Game] 波次管理器已启动")
+
+
+func _setup_hud() -> void:
+	"""设置 HUD"""
+	if _hud and _hud.has_method("set_player"):
+		_hud.set_player(player)
+	
+	# 初始化 HUD 显示
+	if player and player.has("stats"):
+		var stats = player.stats
+		_hud.update_health(stats.current_health, stats.max_health)
+		_hud.update_mana(stats.current_mana, stats.max_mana)
+		_hud.update_exp(stats.current_experience, stats.experience_required)
+
+
+func _cleanup_game() -> void:
+	"""清理游戏状态"""
+	# 清理玩家
+	if player and is_instance_valid(player):
+		player.queue_free()
+		player = null
+	
+	# 清理波次管理器
+	if wave_manager and is_instance_valid(wave_manager):
+		wave_manager.queue_free()
+		wave_manager = null
+	
+	# 清理所有敌人和子弹
+	if _entities:
+		for child in _entities.get_children():
+			if child != player:
+				child.queue_free()
+	
+	if _projectiles:
+		for child in _projectiles.get_children():
+			child.queue_free()
+	
+	# 重置状态
+	game_time = 0.0
+	total_kills = 0
+
+
+func _pause_game() -> void:
+	"""暂停游戏"""
+	_pause_menu.visible = true
+	get_tree().paused = true
+	current_state = GameState.PAUSED
+	game_paused.emit()
+
+
+func _resume_game() -> void:
+	"""恢复游戏"""
+	_pause_menu.visible = false
+	get_tree().paused = false
+	current_state = GameState.PLAYING
+	game_resumed.emit()
+
+
+func _show_game_over() -> void:
+	"""显示游戏结束界面"""
+	# TODO: 实现游戏结束界面
+	print("[Game] 游戏结束!")
+	print("[Game] 存活时间: %.1f 秒" % game_time)
+	print("[Game] 总击杀: %d" % total_kills)
+
+# =============================================================================
+# 私有方法 - 场景管理
+# =============================================================================
+
+## 获取子弹容器
+func get_projectiles_container() -> Node2D:
+	"""获取子弹容器节点"""
+	return _projectiles
+
+
+## 获取实体容器
+func get_entities_container() -> Node2D:
+	"""获取实体容器节点"""
 	return _entities
 
-func get_level_container() -> Node2D:
-	return _level_container
+
+## 生成子弹
+func spawn_bullet(bullet: Node) -> void:
+	"""将子弹添加到场景"""
+	_projectiles.add_child(bullet)
+
+# =============================================================================
+# 信号回调 - 主菜单
+# =============================================================================
+
+func _on_new_game_pressed() -> void:
+	"""新游戏按钮点击"""
+	_start_game()
+
+
+func _on_continue_pressed() -> void:
+	"""继续游戏按钮点击"""
+	if SaveManager and SaveManager.has_save():
+		SaveManager.load_game()
+	_start_game()
+
+
+func _on_settings_pressed() -> void:
+	"""设置按钮点击"""
+	print("[Game] 打开设置...")
+
+
+func _on_quit_pressed() -> void:
+	"""退出按钮点击"""
+	get_tree().quit()
+
+
+func _on_main_menu_new_game() -> void:
+	"""主菜单新游戏信号"""
+	_start_game()
+
+
+func _on_main_menu_continue() -> void:
+	"""主菜单继续游戏信号"""
+	_on_continue_pressed()
+
+
+func _on_main_menu_settings() -> void:
+	"""主菜单设置信号"""
+	_on_settings_pressed()
+
+
+func _on_main_menu_quit() -> void:
+	"""主菜单退出信号"""
+	_on_quit_pressed()
+
+# =============================================================================
+# 信号回调 - 暂停菜单
+# =============================================================================
+
+func _on_pause_resume() -> void:
+	"""暂停菜单继续"""
+	_resume_game()
+
+
+func _on_pause_settings() -> void:
+	"""暂停菜单设置"""
+	print("[Game] 暂停菜单设置...")
+
+
+func _on_pause_main_menu() -> void:
+	"""暂停菜单返回主菜单"""
+	get_tree().paused = false
+	_cleanup_game()
+	_show_main_menu()
+
+# =============================================================================
+# 信号回调 - 玩家
+# =============================================================================
+
+func _on_player_damaged(amount: float, source: Node) -> void:
+	"""玩家受伤回调"""
+	if debug_mode:
+		print("[Game] 玩家受到伤害: ", amount)
+
+
+func _on_player_died() -> void:
+	"""玩家死亡回调"""
+	handle_player_death()
+
+
+func _on_player_stats_changed(stats: Resource) -> void:
+	"""玩家属性变化回调"""
+	if _hud:
+		_hud.update_health(stats.current_health, stats.max_health)
+		_hud.update_mana(stats.current_mana, stats.max_mana)
+		_hud.update_exp(stats.current_experience, stats.experience_required)
+
+
+func _on_player_leveled_up(new_level: int) -> void:
+	"""玩家升级回调"""
+	print("[Game] 玩家升级到: ", new_level)
+
+# =============================================================================
+# 信号回调 - 波次
+# =============================================================================
+
+func _on_wave_started(wave_number: int) -> void:
+	"""波次开始回调"""
+	print("[Game] 第 %d 波开始" % wave_number)
+	GameManager.set_wave(wave_number)
+
+
+func _on_wave_completed(wave_number: int) -> void:
+	"""波次完成回调"""
+	print("[Game] 第 %d 波完成" % wave_number)
+	wave_completed.emit(wave_number)
+
+
+func _on_enemy_spawned(enemy: Node) -> void:
+	"""敌人生成回调"""
+	# 连接敌人死亡信号
+	if enemy.has_signal("died"):
+		enemy.died.connect(_on_enemy_died.bind(enemy))
+
+
+func _on_enemy_died(killer: Node, enemy: Node) -> void:
+	"""敌人死亡回调"""
+	record_enemy_kill()
+	GameManager.record_enemy_kill()
+	
+	# 通知波次管理器
+	if wave_manager and wave_manager.has_method("on_enemy_died"):
+		wave_manager.on_enemy_died(enemy)

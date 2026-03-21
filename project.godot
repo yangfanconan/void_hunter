@@ -1,191 +1,145 @@
-;===============================================================================
-; Void Hunter - Roguelike Game Project
-; Godot 4.3 项目配置文件
-;===============================================================================
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
-[gd_resource type="ProjectSettings" format=3]
+config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
-; 应用程序基本配置
+
 config/name="Void Hunter"
 config/description="A roguelike action game built with Godot 4.3"
-config/version="0.1.0"
-config/icon="res://icon.svg"
-; 主场景入口
+config/version="1.0.0"
 run/main_scene="res://scenes/main.tscn"
-; 启用高DPI支持
-display/window/dpi/allow_hidpi=true
-; 窗口配置
-display/window/size/viewport_width=1280
-display/window/size/viewport_height=720
-display/window/size/window_width_override=1280
-display/window/size/window_height_override=720
-display/window/size/resizable=true
-display/window/size/borderless=false
-display/window/size/fullscreen=false
-display/window/stretch/mode="canvas_items"
-display/window/stretch/aspect="expand"
-; 启用V-Sync以减少屏幕撕裂
-display/window/vsync/vsync_mode=1
+config/features=PackedStringArray("4.6", "Forward Plus")
+config/icon="res://icon.svg"
 
 [autoload]
-; 全局单例注册
-; 格式: 脚本路径=全局名称
+
 GameManager="*res://src/autoload/game_manager.gd"
 AudioManager="*res://src/autoload/audio_manager.gd"
 SaveManager="*res://src/autoload/save_manager.gd"
 ObjectPool="*res://src/autoload/object_pool.gd"
-InputManager="*res://src/autoload/input_manager.gd"
-ResourceManager="*res://src/autoload/resource_manager.gd"
-MemoryManager="*res://src/utils/memory_manager.gd"
-RenderOptimizer="*res://src/utils/render_optimizer.gd"
 
 [display]
-; 显示相关设置
-display/window/handheld/orientation="landscape"
 
-[editor]
-; 编辑器设置
-editor/main_run_args=""
-editor/script/search_in_file_extensions=PoolStringArray(["gd", "shader", "json"])
+window/size/viewport_width=1152
+window/size/viewport_height=640
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [input]
-; 输入映射配置
-; 移动输入
-input/ui_left={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 65, "unicode": 97, "echo": false, "script": null), Object(InputEventJoypadMotion, "resource_local_to_scene": false, "resource_name": "", "device": -1, "axis": 0, "axis_value": -1.0, "script": null)]
-}
-input/ui_right={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 68, "unicode": 100, "echo": false, "script": null), Object(InputEventJoypadMotion, "resource_local_to_scene": false, "resource_name": "", "device": -1, "axis": 0, "axis_value": 1.0, "script": null)]
-}
-input/ui_up={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 87, "unicode": 119, "echo": false, "script": null), Object(InputEventJoypadMotion, "resource_local_to_scene": false, "resource_name": "", "device": -1, "axis": 1, "axis_value": -1.0, "script": null)]
-}
-input/ui_down={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 83, "unicode": 115, "echo": false, "script": null), Object(InputEventJoypadMotion, "resource_local_to_scene": false, "resource_name": "", "device": -1, "axis": 1, "axis_value": 1.0, "script": null)]
-}
-; 攻击输入
-input/attack={
-"deadzone": 0.5,
-"events": [Object(InputEventMouseButton, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "button_mask": 1, "position": Vector2(0, 0), "global_position": Vector2(0, 0), "factor": 1.0, "button_index": 1, "pressed": true, "double_click": false, "script": null), Object(InputEventJoypadButton, "resource_local_to_scene": false, "resource_name": "", "device": -1, "button_index": 0, "pressure": 0.0, "pressed": true, "script": null)]
-}
-; 技能输入
-input/skill_1={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 49, "unicode": 49, "echo": false, "script": null)]
-}
-input/skill_2={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 50, "unicode": 50, "echo": false, "script": null)]
-}
-input/skill_3={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 51, "unicode": 51, "echo": false, "script": null)]
-}
-; 暂停输入
-input/pause={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 4194305, "unicode": 0, "echo": false, "script": null), Object(InputEventJoypadButton, "resource_local_to_scene": false, "resource_name": "", "device": -1, "button_index": 6, "pressure": 0.0, "pressed": true, "script": null)]
-}
-; 物品栏输入
-input/inventory={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 73, "unicode": 105, "echo": false, "script": null)]
-}
-; 冲刺输入
-input/dash={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 32, "unicode": 32, "echo": false, "script": null), Object(InputEventJoypadButton, "resource_local_to_scene": false, "resource_name": "", "device": -1, "button_index": 1, "pressure": 0.0, "pressed": true, "script": null)]
-}
-; 道具输入
-input/item_1={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 90, "unicode": 122, "echo": false, "script": null)]
-}
-input/item_2={
-"deadzone": 0.5,
-"events": [Object(InputEventKey, "resource_local_to_scene": false, "resource_name": "", "device": -1, "window_id": 0, "alt": false, "shift": false, "ctrl": false, "meta": false, "pressed": false, "keycode": 0, "physical_keycode": 88, "unicode": 120, "echo": false, "script": null)]
-}
 
-[internationalization]
-; 国际化/本地化设置
-internationalization/locale/fallback="en"
-internationalization/locale/test="en"
+move_left={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":97,"location":0,"echo":false,"script":null)
+]
+}
+move_right={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":100,"location":0,"echo":false,"script":null)
+]
+}
+move_up={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":119,"location":0,"echo":false,"script":null)
+]
+}
+move_down={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":115,"location":0,"echo":false,"script":null)
+]
+}
+shoot={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":1,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":true,"double_click":false,"script":null)
+]
+}
+attack={
+"deadzone": 0.5,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":1,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":true,"double_click":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":32,"key_label":0,"unicode":32,"location":0,"echo":false,"script":null)
+]
+}
+dash={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194325,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194326,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+skill_1={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":49,"key_label":0,"unicode":49,"location":0,"echo":false,"script":null)
+]
+}
+skill_2={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":50,"key_label":0,"unicode":50,"location":0,"echo":false,"script":null)
+]
+}
+skill_3={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":51,"key_label":0,"unicode":51,"location":0,"echo":false,"script":null)
+]
+}
+skill_4={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":52,"key_label":0,"unicode":52,"location":0,"echo":false,"script":null)
+]
+}
+pause={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194305,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+inventory={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":73,"key_label":0,"unicode":105,"location":0,"echo":false,"script":null)
+]
+}
+ui_left={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":97,"location":0,"echo":false,"script":null)
+]
+}
+ui_right={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":100,"location":0,"echo":false,"script":null)
+]
+}
+ui_up={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":119,"location":0,"echo":false,"script":null)
+]
+}
+ui_down={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":115,"location":0,"echo":false,"script":null)
+]
+}
 
 [layer_names]
-; 2D物理层命名
+
 2d_physics/layer_1="player"
 2d_physics/layer_2="enemies"
 2d_physics/layer_3="projectiles_player"
 2d_physics/layer_4="projectiles_enemies"
 2d_physics/layer_5="items"
 2d_physics/layer_6="environment"
-2d_physics/layer_7="triggers"
-2d_physics/layer_8="obstacles"
-
-[rendering]
-; 渲染设置
-; 使用Forward+渲染器以获得更好的视觉效果
-renderer/rendering_method="forward_plus"
-; 抗锯齿设置
-anti_aliasing/quality/msaa_2d=2
-anti_aliasing/quality/msaa_3d=2
-; 2D阴影和光照
-2d/snap/snap_2d_transforms_to_pixel=true
-2d/snap/snap_2d_vertices_to_pixel=true
-; 环境光
-environment/defaults/default_clear_color=Color(0.05, 0.05, 0.1, 1.0)
-
-[shader]
-; 着色器缓存
-shader_cache/compress_shaders=true
-
-[texture]
-; 纹理导入设置
-import/fallback_texture_import=0
-
-[gui]
-; GUI设置
-gui/theme/custom_font=""
-gui/timers/button_shortcut_feedback_highlight_timer=0.2
-
-[debug]
-; 调试设置
-debug/settings/gdscript/max_call_stack=1024
-debug/settings/profiling/script_profiling_enabled=false
-
-[rendering.environment]
-; 环境渲染
-environment/defaults/default_environment=""
-
-[export]
-; 导出预设
-export/include_filter="*.gd, *.tscn, *.tres, *.json, *.ogg, *.wav, *.png, *.svg"
-export/exclude_filter="*.import, *.uid"
-
-; Android导出配置
-[export.android]
-android/modules="org/godotengine/godot/GodotPaymentV3"
-android/permissions/internet=true
-android/permissions/access_network_state=true
-android/permissions/vibrate=true
-
-; WebGL导出配置
-[export.web]
-http_request/proxy_host=""
-http_request/proxy_port=0
 
 [physics]
-; 物理设置
-2d/physics_engine="GodotPhysics2D"
-common/physics_ticks_per_second=60
-common/max_physics_steps_per_frame=8
 
-[globals]
-; 全局常量定义
-game_version="0.1.0"
-debug_mode=true
+2d/run_on_separate_thread=true
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_2d=2
+anti_aliasing/quality/msaa_3d=2

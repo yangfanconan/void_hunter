@@ -4,17 +4,19 @@
 ## @version: 1.0.0
 
 extends Area2D
-class_name BulletBase
 
 # =============================================================================
 # 信号定义
 # =============================================================================
 
-## 子弹击中目标时触发
+## 击中目标时触发
 signal hit_target(target: Node)
 
 ## 子弹销毁时触发
-signal bullet_destroyed()
+signal destroyed()
+
+## 穿透时触发
+signal pierced(target: Node)
 
 # =============================================================================
 # 常量定义
@@ -23,447 +25,288 @@ signal bullet_destroyed()
 ## 默认子弹速度
 const DEFAULT_SPEED: float = 400.0
 
-## 默认伤害值
+## 默认子弹伤害
 const DEFAULT_DAMAGE: float = 10.0
 
-## 默认生存时间
+## 默认子弹存活时间
 const DEFAULT_LIFETIME: float = 3.0
 
-## 默认击退力度
-const DEFAULT_KNOCKBACK: float = 100.0
-
-# =============================================================================
-# 枚举定义
-# =============================================================================
-
-## 子弹类型
-enum BulletType {
-	STRAIGHT,	## 直线飞行
-	HOMING,		## 追踪
-	SCATTER,	## 散射
-	BOUNCING,	## 反弹
-	PIERCING	## 穿透
-}
-
-## 子弹来源
-enum BulletSource {
-	PLAYER,		## 玩家发射
-	ENEMY,		## 敌人发射
-	NEUTRAL		## 中立
-}
+## 默认穿透次数
+const DEFAULT_PIERCE_COUNT: int = 0
 
 # =============================================================================
 # 导出变量
 # =============================================================================
 
-## 子弹类型
-@export var bullet_type: BulletType = BulletType.STRAIGHT
-
-## 子弹来源
-@export var source: BulletSource = BulletSource.PLAYER
-
-## 飞行速度
+## 移动速度
 @export var speed: float = DEFAULT_SPEED
 
 ## 伤害值
 @export var damage: float = DEFAULT_DAMAGE
 
-## 生存时间
-@export var lifetime: float = DEFAULT_LIFETIME
+## 存活时间
+@export_range(0.5, 10.0) var lifetime: float = DEFAULT_LIFETIME
+
+## 是否是玩家子弹
+@export var is_player_bullet: bool = true
+
+## 穿透次数（0 = 无穿透）
+@export var pierce_count: int = DEFAULT_PIERCE_COUNT
+
+## 是否有击退效果
+@export var has_knockback: bool = true
 
 ## 击退力度
-@export var knockback_force: float = DEFAULT_KNOCKBACK
+@export var knockback_force: float = 100.0
 
-## 是否穿透
-@export var piercing: bool = false
-
-## 最大穿透次数
-@export var max_pierce_count: int = 1
-
-## 追踪强度（仅追踪子弹）
-@export_range(0.0, 1.0) var homing_strength: float = 0.1
-
-## 追踪范围（仅追踪子弹）
-@export var homing_range: float = 300.0
-
-## 最大反弹次数（仅反弹子弹）
-@export var max_bounce_count: int = 3
-
-## 散射角度范围（仅散射子弹）
-@export var scatter_angle: float = PI / 6
+## 子弹大小
+@export var bullet_size: float = 1.0
 
 # =============================================================================
 # 公共变量
 # =============================================================================
 
-## 飞行方向
+## 移动方向
 var direction: Vector2 = Vector2.RIGHT
 
-## 是否为玩家子弹
-var is_player_bullet: bool = true
+## 当前穿透次数
+var current_pierce: int = 0
 
-## 已穿透次数
-var pierce_count: int = 0
-
-## 已反弹次数
-var bounce_count: int = 0
-
-## 当前追踪目标
-var homing_target: Node2D = null
+## 已击中的目标列表
+var hit_targets: Array[Node] = []
 
 # =============================================================================
 # 私有变量
 # =============================================================================
 
 var _lifetime_timer: float = 0.0
-var _hit_targets: Array[Node] = []
+var _is_destroyed: bool = false
 
 # =============================================================================
 # 生命周期方法
 # =============================================================================
 
 func _ready() -> void:
-	"""
-	节点就绪时初始化子弹
-	"""
+	"""节点就绪时初始化"""
 	_initialize_bullet()
 
 
 func _physics_process(delta: float) -> void:
-	"""
-	物理帧更新
-	@param delta: 帧间隔时间
-	"""
-	# 更新生存时间
-	_update_lifetime(delta)
-	
-	# 根据类型更新移动
-	match bullet_type:
-		BulletType.HOMING:
-			_update_homing_movement(delta)
-		_:
-			_update_straight_movement(delta)
+	"""物理帧更新"""
+	# 更新存活时间
+	_lifetime_timer += delta
+	if _lifetime_timer >= lifetime:
+		_destroy_bullet()
+		return
 	
 	# 移动子弹
-	position += direction * speed * delta
+	_move_bullet(delta)
 
 
-func _on_body_entered(body: Node2D) -> void:
-	"""
-	碰撞体进入时处理
-	@param body: 碰撞的物体
-	"""
-	_handle_collision(body)
-
-
-func _on_area_entered(area: Area2D) -> void:
-	"""
-	区域进入时处理
-	@param area: 碰撞的区域
-	"""
-	# 检查是否是伤害区域
-	if area.is_in_group("hitboxes"):
-		var owner_node: Node = area.get_parent()
-		_handle_collision(owner_node)
+func _process(_delta: float) -> void:
+	"""每帧更新"""
+	# 更新旋转（面向移动方向）
+	if direction != Vector2.ZERO:
+		rotation = direction.angle()
 
 # =============================================================================
-# 公共方法
+# 公共方法 - 初始化
 # =============================================================================
 
 ## 初始化子弹
-func initialize(start_pos: Vector2, dir: Vector2, dmg: float, is_player: bool = true) -> void:
-	"""
-	初始化子弹参数
-	@param start_pos: 起始位置
-	@param dir: 飞行方向
-	@param dmg: 伤害值
-	@param is_player: 是否为玩家子弹
-	"""
-	global_position = start_pos
+func initialize(dir: Vector2, spd: float, dmg: float) -> void:
+	"""初始化子弹参数"""
 	direction = dir.normalized()
+	speed = spd
 	damage = dmg
-	is_player_bullet = is_player
-	source = BulletSource.PLAYER if is_player else BulletSource.ENEMY
-	
-	_setup_collision()
 
 
 ## 设置方向
 func set_direction(dir: Vector2) -> void:
-	"""
-	设置飞行方向
-	@param dir: 飞行方向
-	"""
+	"""设置移动方向"""
 	direction = dir.normalized()
-	rotation = direction.angle()
 
 
 ## 设置伤害
 func set_damage(dmg: float) -> void:
-	"""
-	设置伤害值
-	@param dmg: 伤害值
-	"""
+	"""设置伤害值"""
 	damage = dmg
 
 
 ## 设置速度
 func set_speed(spd: float) -> void:
-	"""
-	设置飞行速度
-	@param spd: 速度值
-	"""
+	"""设置移动速度"""
 	speed = spd
 
+# =============================================================================
+# 公共方法 - 控制
+# =============================================================================
 
 ## 销毁子弹
 func destroy() -> void:
-	"""
-	销毁子弹
-	"""
-	bullet_destroyed.emit()
-	_play_destroy_effect()
-	queue_free()
-
-
-## 强制设置穿透
-func set_piercing(enabled: bool, max_pierce: int = 1) -> void:
-	"""
-	设置穿透属性
-	@param enabled: 是否穿透
-	@param max_pierce: 最大穿透次数
-	"""
-	piercing = enabled
-	max_pierce_count = max_pierce
+	"""手动销毁子弹"""
+	_destroy_bullet()
 
 # =============================================================================
 # 私有方法 - 初始化
 # =============================================================================
 
 func _initialize_bullet() -> void:
-	"""
-	初始化子弹内部状态
-	"""
-	_lifetime_timer = lifetime
-	pierce_count = 0
-	bounce_count = 0
-	_hit_targets.clear()
-	
-	# 设置初始旋转
-	rotation = direction.angle()
+	"""初始化子弹内部状态"""
+	_lifetime_timer = 0.0
+	current_pierce = pierce_count
+	hit_targets.clear()
 	
 	# 连接碰撞信号
-	if not body_entered.is_connected(_on_body_entered):
-		body_entered.connect(_on_body_entered)
-	if not area_entered.is_connected(_on_area_entered):
-		area_entered.connect(_on_area_entered)
+	body_entered.connect(_on_body_entered)
+	area_entered.connect(_on_area_entered)
 	
-	# 设置碰撞
+	# 设置碰撞层和掩码
 	_setup_collision()
+	
+	# 确保有碰撞形状
+	_ensure_collision_shape()
+	
+	# 确保有视觉表现
+	_ensure_visual()
 
 
 func _setup_collision() -> void:
-	"""
-	设置碰撞层和掩码
-	"""
+	"""设置碰撞层和掩码"""
 	if is_player_bullet:
-		# 玩家子弹碰撞设置
-		collision_layer = 16  # Player Bullet layer
-		collision_mask = 2 | 64  # Enemies, Obstacles
+		# 玩家子弹：在第3层，检测敌人和障碍物（第2和第4层）
+		collision_layer = 4  # 第3层 (1 << 2)
+		collision_mask = 6   # 第2和第3层 (1 << 1 | 1 << 2)
 	else:
-		# 敌人子弹碰撞设置
-		collision_layer = 32  # Enemy Bullet layer
-		collision_mask = 1 | 64  # Player, Obstacles
+		# 敌人子弹：在第3层，检测玩家和障碍物
+		collision_layer = 4  # 第3层
+		collision_mask = 12  # 第3和第4层 (1 << 2 | 1 << 3)
+
+
+func _ensure_collision_shape() -> void:
+	"""确保有碰撞形状"""
+	var has_collision: bool = false
+	for child in get_children():
+		if child is CollisionShape2D:
+			has_collision = true
+			break
+	
+	if not has_collision:
+		var collision: CollisionShape2D = CollisionShape2D.new()
+		collision.name = "CollisionShape2D"
+		var shape: CircleShape2D = CircleShape2D.new()
+		shape.radius = 5.0 * bullet_size
+		collision.shape = shape
+		add_child(collision)
+
+
+func _ensure_visual() -> void:
+	"""确保有视觉表现"""
+	var has_sprite: bool = false
+	for child in get_children():
+		if child is Sprite2D:
+			has_sprite = true
+			break
+	
+	if not has_sprite:
+		var sprite: Sprite2D = Sprite2D.new()
+		sprite.name = "Sprite"
+		var texture: ImageTexture = ImageTexture.new()
+		var size: int = int(10 * bullet_size)
+		var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+		
+		# 玩家子弹是青色，敌人子弹是红色
+		if is_player_bullet:
+			image.fill(Color(0.2, 0.8, 0.9))
+		else:
+			image.fill(Color(0.9, 0.3, 0.2))
+		
+		texture.set_image(image)
+		sprite.texture = texture
+		add_child(sprite)
 
 # =============================================================================
 # 私有方法 - 更新
 # =============================================================================
 
-func _update_lifetime(delta: float) -> void:
-	"""
-	更新生存时间
-	@param delta: 帧间隔时间
-	"""
-	_lifetime_timer -= delta
-	if _lifetime_timer <= 0:
-		destroy()
+func _move_bullet(delta: float) -> void:
+	"""移动子弹"""
+	global_position += direction * speed * delta
 
 
-func _update_straight_movement(delta: float) -> void:
-	"""
-	更新直线移动
-	@param delta: 帧间隔时间
-	"""
-	# 直线移动不需要额外处理
-	pass
-
-
-func _update_homing_movement(delta: float) -> void:
-	"""
-	更新追踪移动
-	@param delta: 帧间隔时间
-	"""
-	# 寻找目标
-	if homing_target == null or not is_instance_valid(homing_target):
-		_find_homing_target()
-	
-	# 追踪目标
-	if homing_target != null:
-		var target_direction: Vector2 = (homing_target.global_position - global_position).normalized()
-		direction = direction.lerp(target_direction, homing_strength).normalized()
-		rotation = direction.angle()
-
-# =============================================================================
-# 私有方法 - 碰撞处理
-# =============================================================================
-
-func _handle_collision(body: Node) -> void:
-	"""
-	处理碰撞
-	@param body: 碰撞的物体
-	"""
-	# 检查是否已经击中过
-	if body in _hit_targets:
+func _destroy_bullet() -> void:
+	"""销毁子弹"""
+	if _is_destroyed:
 		return
 	
-	# 检查是否是障碍物
-	if body.is_in_group("obstacles") or body.is_in_group("walls"):
-		_handle_obstacle_collision(body)
-		return
-	
-	# 检查是否是有效目标
-	var is_valid_target: bool = false
-	if is_player_bullet and body.is_in_group("enemies"):
-		is_valid_target = true
-	elif not is_player_bullet and body.is_in_group("players"):
-		is_valid_target = true
-	
-	if is_valid_target:
-		_apply_damage_to_target(body)
-		_hit_targets.append(body)
-		hit_target.emit(body)
-		
-		# 检查穿透
-		if piercing:
-			pierce_count += 1
-			if pierce_count >= max_pierce_count:
-				destroy()
-		else:
-			destroy()
+	_is_destroyed = true
+	destroyed.emit()
+	queue_free()
 
+# =============================================================================
+# 私有方法 - 伤害处理
+# =============================================================================
 
-func _handle_obstacle_collision(obstacle: Node) -> void:
-	"""
-	处理障碍物碰撞
-	@param obstacle: 障碍物节点
-	"""
-	if bullet_type == BulletType.BOUNCING and bounce_count < max_bounce_count:
-		# 反弹
-		_bounce(obstacle)
-	else:
-		# 销毁
-		destroy()
-
-
-func _bounce(obstacle: Node) -> void:
-	"""
-	反弹处理
-	@param obstacle: 碰撞的障碍物
-	"""
-	# 简单反弹：反向
-	direction = -direction
-	bounce_count += 1
-	
-	# 播放反弹效果
-	_play_bounce_effect()
-
-
-func _apply_damage_to_target(target: Node) -> void:
-	"""
-	对目标造成伤害
-	@param target: 目标节点
-	"""
+func _apply_damage(target: Node) -> void:
+	"""对目标造成伤害"""
 	if target.has_method("take_damage"):
 		target.take_damage(damage, self)
-		
-		# 应用击退
-		if target.has_method("_apply_knockback"):
-			target._apply_knockback(global_position)
-		elif "velocity" in target:
-			target.velocity += direction * knockback_force
-
-
-func _find_homing_target() -> void:
-	"""
-	寻找追踪目标
-	"""
-	var targets: Array[Node]
 	
+	# 应用击退
+	if has_knockback and target.has_method("knockback"):
+		target.knockback(direction, knockback_force)
+	
+	# 记录击中
+	hit_targets.append(target)
+	hit_target.emit(target)
+
+
+func _check_pierce() -> bool:
+	"""检查是否可以穿透"""
+	if current_pierce > 0:
+		current_pierce -= 1
+		pierced.emit(hit_targets[-1] if hit_targets.size() > 0 else null)
+		return true
+	return false
+
+# =============================================================================
+# 信号回调
+# =============================================================================
+
+func _on_body_entered(body: Node) -> void:
+	"""身体进入检测区域"""
+	# 检查是否已经击中过
+	if body in hit_targets:
+		return
+	
+	# 玩家子弹击中敌人
 	if is_player_bullet:
-		targets = get_tree().get_nodes_in_group("enemies")
+		if body.is_in_group("enemies"):
+			_apply_damage(body)
+			if not _check_pierce():
+				_destroy_bullet()
+		elif body.is_in_group("obstacles"):
+			# 击中障碍物
+			_destroy_bullet()
+	# 敌人子弹击中玩家
 	else:
-		targets = get_tree().get_nodes_in_group("players")
+		if body.is_in_group("players"):
+			_apply_damage(body)
+			if not _check_pierce():
+				_destroy_bullet()
+		elif body.is_in_group("obstacles"):
+			# 击中障碍物
+			_destroy_bullet()
+
+
+func _on_area_entered(area: Node) -> void:
+	"""区域进入检测"""
+	# 检查是否已经击中过
+	if area in hit_targets:
+		return
 	
-	var closest_target: Node2D = null
-	var closest_distance: float = homing_range
-	
-	for target in targets:
-		if not is_instance_valid(target) or target is not Node2D:
-			continue
-		
-		var distance: float = global_position.distance_to(target.global_position)
-		if distance < closest_distance:
-			closest_distance = distance
-			closest_target = target
-	
-	homing_target = closest_target
-
-# =============================================================================
-# 私有方法 - 视觉效果
-# =============================================================================
-
-func _play_destroy_effect() -> void:
-	"""
-	播放销毁效果
-	"""
-	# 可以添加粒子效果等
-	pass
-
-
-func _play_bounce_effect() -> void:
-	"""
-	播放反弹效果
-	"""
-	# 可以添加音效和视觉反馈
-	AudioManager.play_sfx_variant("bullet_bounce", 2, 0.3)
-
-# =============================================================================
-# 对象池接口
-# =============================================================================
-
-func on_spawn() -> void:
-	"""
-	从对象池取出时的初始化
-	"""
-	_lifetime_timer = lifetime
-	pierce_count = 0
-	bounce_count = 0
-	_hit_targets.clear()
-	homing_target = null
-	modulate = Color.WHITE
-
-
-func on_despawn() -> void:
-	"""
-	归还到对象池时的清理
-	"""
-	_hit_targets.clear()
-	homing_target = null
-
-
-func reset() -> void:
-	"""
-	重置子弹状态
-	"""
-	on_despawn()
-	on_spawn()
+	# 处理区域类型的碰撞体
+	if area.has_method("take_damage"):
+		_apply_damage(area)
+		if not _check_pierce():
+			_destroy_bullet()
