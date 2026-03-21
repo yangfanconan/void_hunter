@@ -1,0 +1,298 @@
+// ================================================================================
+// Void Hunter - Android Gradle Build Configuration
+// Gradle构建配置（参考模板）
+// ================================================================================
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.21'
+    }
+}
+
+plugins {
+    id 'com.android.application' version '8.2.0' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.21' apply false
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// ================================================================================
+// 应用模块配置
+// ================================================================================
+
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace 'com.voidhunter.game'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.voidhunter.game"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+
+        // 支持的ABI
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+            // abiFilters 'x86', 'x86_64' // 取消注释以支持模拟器
+        }
+
+        // 多DEX支持（如果方法数超过65536）
+        multiDexEnabled true
+    }
+
+    // 签名配置
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+
+        release {
+            // 生产环境应使用环境变量或gradle.properties
+            if (project.hasProperty('RELEASE_STORE_FILE')) {
+                storeFile file(RELEASE_STORE_FILE)
+                storePassword RELEASE_STORE_PASSWORD
+                keyAlias RELEASE_KEY_ALIAS
+                keyPassword RELEASE_KEY_PASSWORD
+            }
+        }
+    }
+
+    // 构建类型
+    buildTypes {
+        debug {
+            debuggable true
+            jniDebuggable true
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.debug
+
+            // 调试配置
+            buildConfigField "boolean", "DEBUG_MODE", "true"
+            buildConfigField "boolean", "ENABLE_LOGGING", "true"
+        }
+
+        release {
+            debuggable false
+            jniDebuggable false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+
+            // 发布配置
+            buildConfigField "boolean", "DEBUG_MODE", "false"
+            buildConfigField "boolean", "ENABLE_LOGGING", "false"
+        }
+    }
+
+    // 编译选项
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // 构建特性
+    buildFeatures {
+        buildConfig true
+        viewBinding false
+        dataBinding false
+    }
+
+    // 打包选项
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+
+        resources {
+            excludes += [
+                '/META-INF/{AL2.0,LGPL2.1}',
+                '/META-INF/DEPENDENCIES',
+                '/META-INF/NOTICE',
+                '/META-INF/NOTICE.txt',
+                '/META-INF/LICENSE',
+                '/META-INF/LICENSE.txt'
+            ]
+        }
+    }
+
+    // 源集配置
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src/main/java']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+            jniLibs.srcDirs = ['libs']
+        }
+
+        debug {
+            res.srcDirs = ['res/debug']
+        }
+
+        release {
+            res.srcDirs = ['res/release']
+        }
+    }
+
+    // Bundle配置（用于Google Play）
+    bundle {
+        language {
+            // 启用语言分割
+            enableSplit = true
+        }
+
+        density {
+            // 启用密度分割
+            enableSplit = true
+        }
+
+        abi {
+            // 启用ABI分割
+            enableSplit = true
+        }
+    }
+
+    // Lint选项
+    lint {
+        abortOnError false
+        checkReleaseBuilds true
+        disable 'MissingTranslation', 'UnusedResources'
+    }
+}
+
+// ================================================================================
+// 依赖项
+// ================================================================================
+
+dependencies {
+    // Godot引擎库
+    implementation files('libs/godot-lib.4.3.stable.release.aar')
+
+    // AndroidX核心库
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
+
+    // 多DEX支持
+    implementation 'androidx.multidex:multidex:2.0.1'
+
+    // Google Play Games Services（可选）
+    // implementation 'com.google.android.gms:play-services-games-v2:17.0.0'
+    // implementation 'com.google.android.gms:play-services-auth:20.7.0'
+
+    // Firebase（可选）
+    // implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    // implementation 'com.google.firebase:firebase-analytics-ktx'
+    // implementation 'com.google.firebase:firebase-crashlytics-ktx'
+
+    // 测试依赖
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
+
+// ================================================================================
+// 自定义任务
+// ================================================================================
+
+// 复制Godot资源任务
+task copyGodotAssets(type: Copy) {
+    description = 'Copies Godot assets to Android assets folder'
+    group = 'godot'
+
+    from '../build/webgl' // 或其他Godot资源目录
+    into 'assets'
+    include '**/*'
+}
+
+// 清理临时文件任务
+task cleanTemp(type: Delete) {
+    description = 'Cleans temporary build files'
+    group = 'build'
+
+    delete 'build/temp'
+    delete '.gradle'
+}
+
+// APK大小报告任务
+task apkSizeReport {
+    description = 'Generates APK size report'
+    group = 'reporting'
+
+    doLast {
+        def apkFile = file("build/outputs/apk/release/void_hunter_release.apk")
+        if (apkFile.exists()) {
+            def sizeInBytes = apkFile.length()
+            def sizeInMB = sizeInBytes / (1024 * 1024)
+            println "APK Size: ${String.format("%.2f", sizeInMB)} MB"
+
+            if (sizeInMB > 100) {
+                println "WARNING: APK size exceeds 100MB limit!"
+            } else {
+                println "SUCCESS: APK size is within limits"
+            }
+        } else {
+            println "APK file not found. Build the project first."
+        }
+    }
+}
+
+// ================================================================================
+// 构建钩子
+// ================================================================================
+
+// 构建前钩子
+tasks.whenTaskAdded { task ->
+    if (task.name == 'preBuild') {
+        task.doFirst {
+            println "=========================================="
+            println "Building Void Hunter for Android"
+            println "Version: ${android.defaultConfig.versionName}"
+            println "Build Type: ${android.buildTypes.debug.debuggable ? 'Debug' : 'Release'}"
+            println "=========================================="
+        }
+    }
+}
+
+// 构建后钩子
+afterEvaluate {
+    tasks.findByName('assembleRelease')?.doLast {
+        println "=========================================="
+        println "Release APK built successfully!"
+        println "Output: build/outputs/apk/release/"
+        println "=========================================="
+
+        // 生成APK信息
+        exec {
+            commandLine 'sh', '-c', '''
+                echo "APK Information:" > build/apk_info.txt
+                date >> build/apk_info.txt
+                echo "" >> build/apk_info.txt
+                aapt dump badging build/outputs/apk/release/void_hunter_release.apk >> build/apk_info.txt || true
+            '''
+        }
+    }
+}

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a1a">
+
+    <title>Void Hunter - Roguelike Action Game</title>
+    <meta name="description" content="Void Hunter is an exciting roguelike action game built with Godot Engine.">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Void Hunter">
+    <meta property="og:description" content="A roguelike action game built with Godot Engine">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="thumbnail.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 游戏容器 -->
+    <div id="game-container">
+        <!-- 加载界面 -->
+        <div id="loading-screen">
+            <div id="loading-content">
+                <!-- Logo -->
+                <div id="logo-container">
+                    <h1 id="game-title">VOID HUNTER</h1>
+                    <p id="game-subtitle">Roguelike Action Game</p>
+                </div>
+
+                <!-- 进度条 -->
+                <div id="progress-container">
+                    <div id="progress-bar">
+                        <div id="progress-fill"></div>
+                    </div>
+                    <p id="progress-text">0%</p>
+                </div>
+
+                <!-- 加载状态 -->
+                <p id="loading-status">正在初始化...</p>
+
+                <!-- 提示信息 -->
+                <div id="tips-container">
+                    <p id="tip-text">提示: 使用 WASD 或方向键移动角色</p>
+                </div>
+            </div>
+
+            <!-- 背景动画 -->
+            <div id="loading-background">
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+        </div>
+
+        <!-- 游戏画布 -->
+        <canvas id="game-canvas">
+            Your browser does not support HTML5 canvas.
+        </canvas>
+
+        <!-- 移动端控制器 -->
+        <div id="mobile-controls" style="display: none;">
+            <div id="joystick-container">
+                <div id="joystick-base">
+                    <div id="joystick-stick"></div>
+                </div>
+            </div>
+            <div id="action-buttons">
+                <button id="attack-button" class="action-btn">ATK</button>
+                <button id="skill1-button" class="action-btn skill-btn">1</button>
+                <button id="skill2-button" class="action-btn skill-btn">2</button>
+                <button id="skill3-button" class="action-btn skill-btn">3</button>
+            </div>
+        </div>
+
+        <!-- 错误界面 -->
+        <div id="error-screen" style="display: none;">
+            <div id="error-content">
+                <h2 id="error-title">出错了</h2>
+                <p id="error-message">游戏加载失败，请刷新页面重试。</p>
+                <button id="retry-button" onclick="location.reload()">刷新页面</button>
+            </div>
+        </div>
+
+        <!-- 暂停覆盖层 -->
+        <div id="pause-overlay" style="display: none;">
+            <div id="pause-content">
+                <h2>游戏暂停</h2>
+                <p>点击屏幕或按任意键继续</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Godot Engine JavaScript -->
+    <script src="index.js"></script>
+
+    <!-- 自定义加载器 -->
+    <script src="loader.js"></script>
+
+    <!-- 初始化脚本 -->
+    <script>
+        // 游戏实例
+        let gameInstance = null;
+
+        // 检测设备类型
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        // 配置
+        const config = {
+            isMobile: isMobile,
+            isTouchDevice: isTouchDevice,
+            showMobileControls: isMobile || isTouchDevice,
+            enableDebug: new URLSearchParams(window.location.search).has('debug'),
+            preferredRenderer: 'auto', // 'auto', 'webgl', 'webgpu'
+            language: navigator.language || 'en'
+        };
+
+        // DOM 元素
+        const loadingScreen = document.getElementById('loading-screen');
+        const progressBar = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const loadingStatus = document.getElementById('loading-status');
+        const errorScreen = document.getElementById('error-screen');
+        const errorMessage = document.getElementById('error-message');
+        const gameCanvas = document.getElementById('game-canvas');
+        const mobileControls = document.getElementById('mobile-controls');
+
+        // 加载提示
+        const tips = [
+            "提示: 使用 WASD 或方向键移动角色",
+            "提示: 鼠标左键或空格键进行攻击",
+            "提示: 数字键 1-3 释放技能",
+            "提示: 收集能量宝石提升等级",
+            "提示: 注意躲避敌人的攻击",
+            "提示: 合理搭配技能组合",
+            "提示: 探索地图寻找隐藏宝箱",
+            "提示: 升级后选择合适的强化",
+            "提示: 按 ESC 或 P 键暂停游戏",
+            "提示: 按 I 键打开物品栏"
+        ];
+
+        // 显示随机提示
+        function showRandomTip() {
+            const tipText = document.getElementById('tip-text');
+            const randomTip = tips[Math.floor(Math.random() * tips.length)];
+            tipText.textContent = randomTip;
+        }
+
+        // 更新加载进度
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            progressBar.style.width = percent + '%';
+            progressText.textContent = percent + '%';
+
+            // 更新加载状态
+            if (percent < 20) {
+                loadingStatus.textContent = '正在加载引擎...';
+            } else if (percent < 50) {
+                loadingStatus.textContent = '正在加载资源...';
+            } else if (percent < 80) {
+                loadingStatus.textContent = '正在初始化游戏...';
+            } else {
+                loadingStatus.textContent = '即将开始...';
+            }
+        }
+
+        // 显示错误
+        function showError(message) {
+            errorScreen.style.display = 'flex';
+            errorMessage.textContent = message;
+        }
+
+        // 隐藏加载界面
+        function hideLoadingScreen() {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+
+        // 显示移动端控制器
+        function showMobileControls() {
+            if (config.showMobileControls) {
+                mobileControls.style.display = 'flex';
+            }
+        }
+
+        // 初始化游戏
+        function initGame() {
+            console.log('Initializing Void Hunter...');
+
+            // 显示随机提示
+            showRandomTip();
+            setInterval(showRandomTip, 5000);
+
+            // 检查WebGL支持
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+
+            if (!gl) {
+                showError('您的浏览器不支持WebGL，请使用现代浏览器（Chrome、Firefox、Safari等）访问。');
+                return;
+            }
+
+            // 加载游戏
+            const engine = new Engine({
+                args: [],
+                canvas: gameCanvas,
+                canvasResizePolicy: 2, // 0: none, 1: quick, 2: resizable
+                ensureCrossOriginIsolationHeaders: true,
+                executable: 'index',
+                experimentalVK: false,
+                fileSizes: {
+                    'index.js': 1024 * 1024,
+                    'index.wasm': 20 * 1024 * 1024,
+                    'index.pck': 25 * 1024 * 1024
+                },
+                focusCanvas: true,
+                gdextensionLibs: [],
+                onExit: function(code) {
+                    console.log('Game exited with code:', code);
+                },
+                onProgress: function(current, total) {
+                    updateProgress(current, total);
+                },
+                onPrint: function(message) {
+                    console.log('[Game]', message);
+                },
+                onPrintError: function(error) {
+                    console.error('[Game Error]', error);
+                }
+            });
+
+            // 启动游戏
+            engine.startGame().then(function(instance) {
+                gameInstance = instance;
+                console.log('Game started successfully');
+
+                // 隐藏加载界面
+                hideLoadingScreen();
+
+                // 显示移动端控制器
+                showMobileControls();
+
+                // 设置全屏
+                if (config.isMobile) {
+                    document.documentElement.requestFullscreen().catch(function(e) {
+                        console.log('Fullscreen request failed:', e);
+                    });
+                }
+
+            }).catch(function(error) {
+                console.error('Failed to start game:', error);
+                showError('游戏启动失败: ' + error.message);
+            });
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
+            // 等待一小段时间确保所有资源都已加载
+            setTimeout(initGame, 100);
+        });
+
+        // 处理全屏切换
+        document.addEventListener('click', function(e) {
+            // 如果点击的是按钮，不处理全屏
+            if (e.target.tagName === 'BUTTON') return;
+
+            // 双击全屏
+            if (e.detail === 2 && !document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(function(e) {
+                    console.log('Fullscreen request failed:', e);
+                });
+            }
+        });
+
+        // 处理屏幕方向
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(function(e) {
+                console.log('Orientation lock failed:', e);
+            });
+        }
+
+        // 处理页面可见性
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // 页面隐藏时暂停游戏
+                const pauseOverlay = document.getElementById('pause-overlay');
+                pauseOverlay.style.display = 'flex';
+            }
+        });
+
+        // 处理窗口大小变化
+        window.addEventListener('resize', function() {
+            // 游戏引擎会自动处理大小变化
+            console.log('Window resized');
+        });
+
+        // 处理键盘事件
+        document.addEventListener('keydown', function(e) {
+            // ESC键处理
+            if (e.key === 'Escape') {
+                const pauseOverlay = document.getElementById('pause-overlay');
+                if (pauseOverlay.style.display === 'flex') {
+                    pauseOverlay.style.display = 'none';
+                }
+            }
+        });
+
+        // PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful');
+                }).catch(function(error) {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+            });
+        }
+
+        // 控制台输出
+        console.log('%c Void Hunter ', 'background: #6b21a8; color: white; font-size: 24px; font-weight: bold;');
+        console.log('%c Built with Godot Engine 4.3 ', 'background: #478cbf; color: white; font-size: 14px;');
+    </script>
+</body>
+</html>

@@ -1,0 +1,507 @@
+[gd_scene load_steps=4 format=3 uid="uid://main_scene_001"]
+
+[ext_resource type="Script" path="res://src/game.gd" id="script_game"]
+[ext_resource type="Script" path="res://src/ui/hud.gd" id="script_hud"]
+[ext_resource type="Script" path="res://src/ui/pause_menu.gd" id="script_pause"]
+
+[node name="Main" type="Node"]
+script = ExtResource("script_game")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="MainMenu" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="CanvasLayer/MainMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.1, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/MainMenu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -150.0
+offset_right = 150.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="CanvasLayer/MainMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.6, 0.2, 1)
+theme_override_font_sizes/font_size = 48
+text = "VOID HUNTER"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="CanvasLayer/MainMenu/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 18
+text = "无尽征途 | Endless Journey"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="ButtonNewGame" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "🎮 新游戏"
+
+[node name="ButtonContinue" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "📂 继续游戏"
+
+[node name="ButtonCharacterSelect" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "👤 角色选择"
+
+[node name="ButtonCodex" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "📖 道具图鉴"
+
+[node name="ButtonSettings" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "⚙️ 设置"
+
+[node name="ButtonQuit" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "🚪 退出"
+
+[node name="VersionLabel" type="Label" parent="CanvasLayer/MainMenu"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -120.0
+offset_top = -30.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.4, 0.4, 0.4, 1)
+text = "v1.0.0"
+horizontal_alignment = 2
+
+[node name="GameWorld" type="Node2D" parent="."]
+visible = false
+
+[node name="LevelContainer" type="Node2D" parent="GameWorld"]
+
+[node name="TileMap" type="TileMap" parent="GameWorld/LevelContainer"]
+format = 2
+
+[node name="Entities" type="Node2D" parent="GameWorld"]
+
+[node name="Projectiles" type="Node2D" parent="GameWorld"]
+
+[node name="Effects" type="Node2D" parent="GameWorld"]
+
+[node name="PlayerSpawn" type="Marker2D" parent="GameWorld"]
+position = Vector2(576, 320)
+
+[node name="HUD" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script_hud")
+
+[node name="TopLeft" type="VBoxContainer" parent="HUD"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 250.0
+offset_bottom = 120.0
+
+[node name="HealthContainer" type="VBoxContainer" parent="HUD/TopLeft"]
+layout_mode = 2
+
+[node name="HealthLabel" type="Label" parent="HUD/TopLeft/HealthContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.2, 0.2, 1)
+text = "HP: 100/100"
+
+[node name="HealthBar" type="ProgressBar" parent="HUD/TopLeft/HealthContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="ManaContainer" type="VBoxContainer" parent="HUD/TopLeft"]
+layout_mode = 2
+
+[node name="ManaLabel" type="Label" parent="HUD/TopLeft/ManaContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.4, 0.9, 1)
+text = "MP: 50/50"
+
+[node name="ManaBar" type="ProgressBar" parent="HUD/TopLeft/ManaContainer"]
+custom_minimum_size = Vector2(200, 16)
+layout_mode = 2
+max_value = 50.0
+value = 50.0
+show_percentage = false
+
+[node name="StaminaContainer" type="VBoxContainer" parent="HUD/TopLeft"]
+layout_mode = 2
+
+[node name="StaminaLabel" type="Label" parent="HUD/TopLeft/StaminaContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.8, 0.3, 1)
+text = "体力: 100/100"
+
+[node name="StaminaBar" type="ProgressBar" parent="HUD/TopLeft/StaminaContainer"]
+custom_minimum_size = Vector2(200, 12)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="TopRight" type="VBoxContainer" parent="HUD"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+offset_left = -180.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 120.0
+grow_horizontal = 0
+alignment = 2
+
+[node name="WaveLabel" type="Label" parent="HUD/TopRight"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.7, 0.2, 1)
+text = "波次: 1"
+
+[node name="EnemiesLabel" type="Label" parent="HUD/TopRight"]
+layout_mode = 2
+text = "敌人: 0"
+
+[node name="TimeLabel" type="Label" parent="HUD/TopRight"]
+layout_mode = 2
+text = "时间: 00:00"
+
+[node name="KillsLabel" type="Label" parent="HUD/TopRight"]
+layout_mode = 2
+text = "击杀: 0"
+
+[node name="LevelLabel" type="Label" parent="HUD/TopRight"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.9, 0.2, 1)
+text = "等级: 1"
+
+[node name="BottomBar" type="HBoxContainer" parent="HUD"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -80.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+
+[node name="ItemsBar" type="HBoxContainer" parent="HUD/BottomBar"]
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="Item1" type="TextureButton" parent="HUD/BottomBar/ItemsBar"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/ItemsBar/Item1"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -15.0
+offset_right = 15.0
+offset_bottom = 0.0
+grow_horizontal = 0
+text = "Z"
+
+[node name="Item2" type="TextureButton" parent="HUD/BottomBar/ItemsBar"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/ItemsBar/Item2"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -15.0
+offset_right = 15.0
+offset_bottom = 0.0
+grow_horizontal = 0
+text = "X"
+
+[node name="Item3" type="TextureButton" parent="HUD/BottomBar/ItemsBar"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/ItemsBar/Item3"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -15.0
+offset_right = 15.0
+offset_bottom = 0.0
+grow_horizontal = 0
+text = "C"
+
+[node name="Spacer" type="Control" parent="HUD/BottomBar"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+
+[node name="SkillsBar" type="HBoxContainer" parent="HUD/BottomBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
+
+[node name="Skill1" type="TextureButton" parent="HUD/BottomBar/SkillsBar"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/SkillsBar/Skill1"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -18.0
+offset_right = 18.0
+offset_bottom = 3.0
+grow_horizontal = 0
+text = "1"
+
+[node name="Cooldown" type="ProgressBar" parent="HUD/BottomBar/SkillsBar/Skill1"]
+visible = false
+custom_minimum_size = Vector2(60, 6)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -30.0
+offset_top = -6.0
+offset_right = 30.0
+grow_horizontal = 2
+grow_vertical = 0
+max_value = 1.0
+value = 1.0
+
+[node name="Skill2" type="TextureButton" parent="HUD/BottomBar/SkillsBar"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/SkillsBar/Skill2"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -18.0
+offset_right = 18.0
+offset_bottom = 3.0
+grow_horizontal = 0
+text = "2"
+
+[node name="Skill3" type="TextureButton" parent="HUD/BottomBar/SkillsBar"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/SkillsBar/Skill3"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -18.0
+offset_right = 18.0
+offset_bottom = 3.0
+grow_horizontal = 0
+text = "3"
+
+[node name="Skill4" type="TextureButton" parent="HUD/BottomBar/SkillsBar"]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HUD/BottomBar/SkillsBar/Skill4"]
+layout_mode = 1
+anchors_preset = 2
+offset_top = -18.0
+offset_right = 18.0
+offset_bottom = 3.0
+grow_horizontal = 0
+text = "4"
+
+[node name="Spacer2" type="Control" parent="HUD/BottomBar"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+
+[node name="PauseButton" type="Button" parent="HUD/BottomBar"]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+text = "⏸"
+
+[node name="ExpBar" type="ProgressBar" parent="HUD"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -90.0
+offset_right = -10.0
+offset_bottom = -82.0
+grow_horizontal = 2
+grow_vertical = 0
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="ExpLabel" type="Label" parent="HUD/ExpBar"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -10.0
+offset_bottom = 10.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "EXP: 0/100"
+horizontal_alignment = 1
+
+[node name="PauseMenu" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script_pause")
+
+[node name="Background" type="ColorRect" parent="PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="Panel" type="PanelContainer" parent="PauseMenu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -180.0
+offset_right = 150.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu/Panel"]
+layout_mode = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="PauseMenu/Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "游戏暂停"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="PauseMenu/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="ButtonResume" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "▶ 继续游戏"
+
+[node name="ButtonSettings" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "⚙️ 设置"
+
+[node name="ButtonMainMenu" type="Button" parent="PauseMenu/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(200, 45)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "🏠 返回主菜单"
+
+[node name="MobileControls" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="JoystickMove" type="Control" parent="MobileControls"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -200.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="JoystickAttack" type="Control" parent="MobileControls"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = -20.0
+grow_vertical = 0
+
+[connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonNewGame" to="." method="_on_main_menu_new_game"]
+[connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonContinue" to="." method="_on_main_menu_continue"]
+[connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonSettings" to="." method="_on_main_menu_settings"]
+[connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonQuit" to="." method="_on_main_menu_quit"]
+[connection signal="pressed" from="HUD/BottomBar/PauseButton" to="." method="pause_game"]
+[connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonResume" to="." method="_on_pause_resume"]
+[connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonSettings" to="." method="_on_pause_settings"]
+[connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonMainMenu" to="." method="_on_pause_main_menu"]

@@ -1,0 +1,695 @@
+/* ================================================================================
+   Void Hunter - WebGL Template Styles
+   样式表：全屏适配、移动端适配、加载动画
+   ================================================================================ */
+
+/* 重置和基础样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0a0a1a;
+    color: #ffffff;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 游戏容器 */
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+}
+
+/* 游戏画布 */
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    outline: none;
+}
+
+/* ================================================================================
+   加载界面
+   ================================================================================ */
+
+#loading-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+    transition: opacity 0.5s ease-out;
+}
+
+#loading-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    max-width: 90%;
+    padding: 40px;
+}
+
+/* Logo容器 */
+#logo-container {
+    margin-bottom: 60px;
+}
+
+#game-title {
+    font-size: 72px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 60px rgba(168, 85, 247, 0.5);
+    animation: titleGlow 2s ease-in-out infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes titleGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+    }
+    50% {
+        filter: drop-shadow(0 0 40px rgba(168, 85, 247, 1));
+    }
+}
+
+#game-subtitle {
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+/* 进度条 */
+#progress-container {
+    margin-bottom: 40px;
+}
+
+#progress-bar {
+    width: 100%;
+    max-width: 500px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto 15px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #8b5cf6 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease-out;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+    position: relative;
+}
+
+#progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 100%
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+#progress-text {
+    font-size: 28px;
+    font-weight: bold;
+    color: #a855f7;
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
+}
+
+/* 加载状态 */
+#loading-status {
+    font-size: 16px;
+    color: #94a3b8;
+    margin-bottom: 30px;
+    min-height: 24px;
+}
+
+/* 提示信息 */
+#tips-container {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#tip-text {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-style: italic;
+}
+
+/* 背景动画 */
+#loading-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(168, 85, 247, 0.6);
+    border-radius: 50%;
+    animation: float 20s infinite;
+}
+
+.particle:nth-child(1) {
+    left: 10%;
+    animation-delay: 0s;
+    animation-duration: 15s;
+}
+
+.particle:nth-child(2) {
+    left: 30%;
+    animation-delay: 2s;
+    animation-duration: 18s;
+}
+
+.particle:nth-child(3) {
+    left: 50%;
+    animation-delay: 4s;
+    animation-duration: 20s;
+}
+
+.particle:nth-child(4) {
+    left: 70%;
+    animation-delay: 6s;
+    animation-duration: 16s;
+}
+
+.particle:nth-child(5) {
+    left: 90%;
+    animation-delay: 8s;
+    animation-duration: 22s;
+}
+
+@keyframes float {
+    0% {
+        bottom: -10%;
+        opacity: 0;
+        transform: translateX(0) scale(1);
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        bottom: 110%;
+        opacity: 0;
+        transform: translateX(100px) scale(0.5);
+    }
+}
+
+/* ================================================================================
+   错误界面
+   ================================================================================ */
+
+#error-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 10, 26, 0.95);
+    z-index: 2000;
+}
+
+#error-content {
+    text-align: center;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    max-width: 90%;
+}
+
+#error-title {
+    font-size: 32px;
+    color: #ef4444;
+    margin-bottom: 20px;
+}
+
+#error-message {
+    font-size: 16px;
+    color: #94a3b8;
+    margin-bottom: 30px;
+}
+
+#retry-button {
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#retry-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(168, 85, 247, 0.4);
+}
+
+/* ================================================================================
+   移动端控制器
+   ================================================================================ */
+
+#mobile-controls {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+#joystick-container {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    pointer-events: auto;
+}
+
+#joystick-base {
+    width: 120px;
+    height: 120px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 3px solid rgba(168, 85, 247, 0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+}
+
+#joystick-stick {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+    transition: transform 0.1s ease-out;
+}
+
+#action-buttons {
+    position: absolute;
+    bottom: 40px;
+    right: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.action-btn {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 3px solid rgba(168, 85, 247, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+}
+
+.action-btn:active {
+    transform: scale(0.9);
+    background: rgba(168, 85, 247, 0.3);
+}
+
+#attack-button {
+    width: 90px;
+    height: 90px;
+    font-size: 20px;
+}
+
+.skill-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+}
+
+/* ================================================================================
+   暂停覆盖层
+   ================================================================================ */
+
+#pause-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 10, 26, 0.9);
+    z-index: 1500;
+    cursor: pointer;
+}
+
+#pause-content {
+    text-align: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+#pause-content h2 {
+    font-size: 48px;
+    color: #a855f7;
+    margin-bottom: 20px;
+    text-shadow: 0 0 30px rgba(168, 85, 247, 0.8);
+}
+
+#pause-content p {
+    font-size: 18px;
+    color: #94a3b8;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ================================================================================
+   响应式设计
+   ================================================================================ */
+
+/* 平板设备 */
+@media screen and (max-width: 1024px) {
+    #game-title {
+        font-size: 56px;
+        letter-spacing: 6px;
+    }
+
+    #game-subtitle {
+        font-size: 16px;
+    }
+
+    #loading-content {
+        padding: 30px;
+    }
+}
+
+/* 移动设备 */
+@media screen and (max-width: 768px) {
+    #game-title {
+        font-size: 42px;
+        letter-spacing: 4px;
+    }
+
+    #game-subtitle {
+        font-size: 14px;
+    }
+
+    #progress-bar {
+        max-width: 300px;
+        height: 6px;
+    }
+
+    #progress-text {
+        font-size: 24px;
+    }
+
+    #loading-status {
+        font-size: 14px;
+    }
+
+    #tip-text {
+        font-size: 12px;
+    }
+
+    #loading-content {
+        padding: 20px;
+    }
+
+    #logo-container {
+        margin-bottom: 40px;
+    }
+
+    #tips-container {
+        padding: 15px;
+    }
+
+    /* 移动端控制器调整 */
+    #joystick-container {
+        bottom: 30px;
+        left: 30px;
+    }
+
+    #joystick-base {
+        width: 100px;
+        height: 100px;
+    }
+
+    #joystick-stick {
+        width: 40px;
+        height: 40px;
+    }
+
+    #action-buttons {
+        bottom: 30px;
+        right: 30px;
+        gap: 10px;
+    }
+
+    .action-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 16px;
+    }
+
+    #attack-button {
+        width: 75px;
+        height: 75px;
+    }
+
+    .skill-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+}
+
+/* 小屏幕手机 */
+@media screen and (max-width: 480px) {
+    #game-title {
+        font-size: 32px;
+        letter-spacing: 3px;
+    }
+
+    #game-subtitle {
+        font-size: 12px;
+        letter-spacing: 2px;
+    }
+
+    #progress-bar {
+        max-width: 250px;
+        height: 5px;
+    }
+
+    #progress-text {
+        font-size: 20px;
+    }
+
+    #loading-status {
+        font-size: 12px;
+    }
+
+    #logo-container {
+        margin-bottom: 30px;
+    }
+
+    #tips-container {
+        padding: 12px;
+    }
+
+    #tip-text {
+        font-size: 11px;
+    }
+
+    /* 移动端控制器调整 */
+    #joystick-container {
+        bottom: 20px;
+        left: 20px;
+    }
+
+    #joystick-base {
+        width: 90px;
+        height: 90px;
+    }
+
+    #joystick-stick {
+        width: 35px;
+        height: 35px;
+    }
+
+    #action-buttons {
+        bottom: 20px;
+        right: 20px;
+        gap: 8px;
+    }
+
+    .action-btn {
+        width: 55px;
+        height: 55px;
+        font-size: 14px;
+    }
+
+    #attack-button {
+        width: 65px;
+        height: 65px;
+    }
+
+    .skill-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+
+    #error-content {
+        padding: 25px;
+    }
+
+    #error-title {
+        font-size: 24px;
+    }
+
+    #error-message {
+        font-size: 14px;
+    }
+
+    #retry-button {
+        padding: 12px 30px;
+        font-size: 16px;
+    }
+
+    #pause-content h2 {
+        font-size: 36px;
+    }
+
+    #pause-content p {
+        font-size: 14px;
+    }
+}
+
+/* 横屏模式优化 */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    #game-title {
+        font-size: 36px;
+    }
+
+    #game-subtitle {
+        font-size: 12px;
+    }
+
+    #logo-container {
+        margin-bottom: 20px;
+    }
+
+    #progress-container {
+        margin-bottom: 20px;
+    }
+
+    #loading-status {
+        margin-bottom: 15px;
+    }
+
+    #tips-container {
+        padding: 10px;
+    }
+}
+
+/* 高DPI屏幕 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    #joystick-base,
+    .action-btn {
+        border-width: 2px;
+    }
+}
+
+/* 暗色模式适配 (系统级) */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #0a0a1a;
+    }
+}
+
+/* 减少动画 (无障碍) */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

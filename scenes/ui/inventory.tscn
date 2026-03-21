@@ -1,0 +1,271 @@
+[gd_scene load_steps=3 format=3 uid="uid://inventory_ui_001"]
+
+[ext_resource type="Script" path="res://src/ui/inventory.gd" id="script_inventory"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot"]
+bg_color = Color(0.2, 0.2, 0.2, 0.8)
+border_color = Color(0.4, 0.4, 0.4)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+
+[node name="Inventory" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script_inventory")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -320.0
+offset_right = 280.0
+offset_bottom = 320.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "背包"
+horizontal_alignment = 1
+
+[node name="EquipmentSection" type="VBoxContainer" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="EquipmentLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection"]
+layout_mode = 2
+text = "装备栏"
+horizontal_alignment = 1
+
+[node name="EquipmentContainer" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="WeaponSlot" type="Panel" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="SlotLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/WeaponSlot"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 4.0
+offset_top = 2.0
+offset_right = 50.0
+offset_bottom = 18.0
+text = "武器"
+horizontal_alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/WeaponSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 18.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RarityBorder" type="Panel" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/WeaponSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ArmorSlot" type="Panel" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="SlotLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/ArmorSlot"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 4.0
+offset_top = 2.0
+offset_right = 50.0
+offset_bottom = 18.0
+text = "防具"
+horizontal_alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/ArmorSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 18.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RarityBorder" type="Panel" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/ArmorSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="AccessorySlot" type="Panel" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="SlotLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/AccessorySlot"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 4.0
+offset_top = 2.0
+offset_right = 50.0
+offset_bottom = 18.0
+text = "饰品"
+horizontal_alignment = 1
+
+[node name="Icon" type="TextureRect" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/AccessorySlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 18.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RarityBorder" type="Panel" parent="Panel/MarginContainer/VBoxContainer/EquipmentSection/EquipmentContainer/AccessorySlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HSeparator" type="HSeparator" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="InventorySection" type="VBoxContainer" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="InventoryLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer/InventorySection"]
+layout_mode = 2
+text = "物品栏"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel/MarginContainer/VBoxContainer/InventorySection"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="GridContainer" type="GridContainer" parent="Panel/MarginContainer/VBoxContainer/InventorySection/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+columns = 5
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ItemInfoPanel" type="PanelContainer" parent="Panel/MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/MarginContainer/VBoxContainer/ItemInfoPanel"]
+layout_mode = 2
+
+[node name="ItemName" type="Label" parent="Panel/MarginContainer/VBoxContainer/ItemInfoPanel/VBoxContainer"]
+layout_mode = 2
+text = "物品名称"
+horizontal_alignment = 1
+
+[node name="ItemDescription" type="Label" parent="Panel/MarginContainer/VBoxContainer/ItemInfoPanel/VBoxContainer"]
+layout_mode = 2
+text = "物品描述"
+autowrap_mode = 2
+
+[node name="ItemStats" type="Label" parent="Panel/MarginContainer/VBoxContainer/ItemInfoPanel/VBoxContainer"]
+layout_mode = 2
+text = "属性加成"
+autowrap_mode = 2
+
+[node name="HSeparator3" type="HSeparator" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 15
+
+[node name="ButtonUse" type="Button" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+disabled = true
+text = "使用(E)"
+
+[node name="ButtonDrop" type="Button" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+disabled = true
+text = "丢弃(Q)"
+
+[node name="ButtonClose" type="Button" parent="Panel/MarginContainer/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "关闭(ESC)"
+
+[node name="QuickSlotsContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -80.0
+offset_top = -60.0
+offset_right = 80.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+alignment = 1
+theme_override_constants/separation = 10

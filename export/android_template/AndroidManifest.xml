@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Void Hunter - Android Manifest
+  Android应用配置文件
+
+  注意：此文件作为参考模板，实际构建时Godot会自动生成。
+  如需自定义，请在Godot编辑器的导出设置中配置。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.voidhunter.game"
+    android:versionCode="1"
+    android:versionName="0.1.0">
+
+    <!-- 应用信息 -->
+    <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/icon"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/icon_round"
+        android:supportsRtl="true"
+        android:theme="@style/GodotAppTheme"
+        android:isGame="true"
+        android:appCategory="game"
+        android:requestLegacyExternalStorage="false"
+        android:exported="true"
+        tools:ignore="UnusedAttribute">
+
+        <!-- 主Activity -->
+        <activity
+            android:name="com.godot.game.GodotApp"
+            android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|uiMode|layoutDirection|locale"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:resizeableActivity="false"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- 启动Intent -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+
+            <!-- 游戏元数据 -->
+            <meta-data
+                android:name="android.max_aspect"
+                android:value="2.1" />
+        </activity>
+
+        <!-- Godot元数据 -->
+        <meta-data
+            android:name="com.godot.game.splash_background_color"
+            android:value="#0a0a1a" />
+
+        <meta-data
+            android:name="com.godot.game.splash_image_path"
+            android:value="" />
+
+    </application>
+
+    <!-- 基本权限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- 可选权限（根据需要启用） -->
+    <!-- 震动反馈 -->
+    <!-- <uses-permission android:name="android.permission.VIBRATE" /> -->
+
+    <!-- 外部存储（Android 10及以下） -->
+    <!-- <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" /> -->
+    <!-- <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" /> -->
+
+    <!-- 媒体访问（Android 13+） -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /> -->
+    <!-- <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" /> -->
+
+    <!-- 硬件特性 -->
+    <uses-feature
+        android:glEsVersion="0x00030000"
+        android:required="true" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen.multitouch"
+        android:required="false" />
+
+    <uses-feature
+        android:name="android.hardware.touchscreen.multitouch.distinct"
+        android:required="false" />
+
+    <uses-feature
+        android:name="android.hardware.gamepad"
+        android:required="false" />
+
+    <uses-feature
+        android:name="android.hardware.type.pc"
+        android:required="false" />
+
+    <!-- 游戏手柄支持 -->
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="false" />
+
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="false" />
+
+    <!-- 屏幕要求 -->
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true"
+        android:xlargeScreens="true" />
+
+    <!-- Android TV支持（可选） -->
+    <!-- 取消注释以启用 -->
+    <!--
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
+    -->
+
+    <!-- 最低和目标SDK版本 -->
+    <!-- 这些在Godot导出设置中配置，这里仅作参考 -->
+    <!--
+    <uses-sdk
+        android:minSdkVersion="26"
+        android:targetSdkVersion="34" />
+    -->
+
+</manifest>

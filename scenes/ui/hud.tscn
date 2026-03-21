@@ -1,0 +1,525 @@
+[gd_scene load_steps=2 format=3 uid="uid://hud_scene"]
+
+[ext_resource type="Script" path="res://src/ui/hud.gd" id="script_hud"]
+
+[node name="HUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script_hud")
+
+[node name="LeftPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 220.0
+offset_bottom = 180.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="LeftPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+theme_override_constants/separation = 8
+
+[node name="LevelContainer" type="HBoxContainer" parent="LeftPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="LeftPanel/VBoxContainer/LevelContainer"]
+layout_mode = 2
+text = "Lv. 1"
+
+[node name="HealthContainer" type="VBoxContainer" parent="LeftPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="HealthLabel" type="Label" parent="LeftPanel/VBoxContainer/HealthContainer"]
+layout_mode = 2
+text = "100 / 100"
+
+[node name="HealthBar" type="ProgressBar" parent="LeftPanel/VBoxContainer/HealthContainer"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="ManaContainer" type="VBoxContainer" parent="LeftPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="ManaLabel" type="Label" parent="LeftPanel/VBoxContainer/ManaContainer"]
+layout_mode = 2
+text = "50 / 50"
+
+[node name="ManaBar" type="ProgressBar" parent="LeftPanel/VBoxContainer/ManaContainer"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+max_value = 50.0
+value = 50.0
+show_percentage = false
+
+[node name="StaminaContainer" type="VBoxContainer" parent="LeftPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="StaminaLabel" type="Label" parent="LeftPanel/VBoxContainer/StaminaContainer"]
+layout_mode = 2
+text = "100 / 100"
+
+[node name="StaminaBar" type="ProgressBar" parent="LeftPanel/VBoxContainer/StaminaContainer"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="RightPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -180.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 200.0
+grow_horizontal = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="RightPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+theme_override_constants/separation = 8
+
+[node name="PauseButton" type="Button" parent="RightPanel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+text = "II"
+
+[node name="WaveInfo" type="VBoxContainer" parent="RightPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="WaveLabel" type="Label" parent="RightPanel/VBoxContainer/WaveInfo"]
+layout_mode = 2
+text = "Wave 1"
+
+[node name="EnemyCountLabel" type="Label" parent="RightPanel/VBoxContainer/WaveInfo"]
+layout_mode = 2
+text = "Enemies: 0"
+
+[node name="StatsContainer" type="VBoxContainer" parent="RightPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="TimeLabel" type="Label" parent="RightPanel/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "00:00"
+
+[node name="KillCountLabel" type="Label" parent="RightPanel/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "Kills: 0"
+
+[node name="MinimapContainer" type="Control" parent="RightPanel"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -75.0
+offset_top = -160.0
+offset_right = 75.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="BottomPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -100.0
+offset_right = 300.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="BottomPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+alignment = 1
+
+[node name="ItemBar" type="HBoxContainer" parent="BottomPanel/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ItemSlot1" type="Control" parent="BottomPanel/HBoxContainer/ItemBar"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot1"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "1"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="ItemSlot2" type="Control" parent="BottomPanel/HBoxContainer/ItemBar"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "2"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="ItemSlot3" type="Control" parent="BottomPanel/HBoxContainer/ItemBar"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot3"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "3"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/ItemBar/ItemSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="SkillBar" type="HBoxContainer" parent="BottomPanel/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SkillSlot1" type="Control" parent="BottomPanel/HBoxContainer/SkillBar"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot1"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "1"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="SkillSlot2" type="Control" parent="BottomPanel/HBoxContainer/SkillBar"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot2"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "2"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="SkillSlot3" type="Control" parent="BottomPanel/HBoxContainer/SkillBar"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot3"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "3"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="SkillSlot4" type="Control" parent="BottomPanel/HBoxContainer/SkillBar"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="BgPanel" type="Panel" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot4"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Icon" type="TextureRect" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot4"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="KeyLabel" type="Label" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot4"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -16.0
+offset_top = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "4"
+
+[node name="Button" type="Button" parent="BottomPanel/HBoxContainer/SkillBar/SkillSlot4"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true
+
+[node name="ExpContainer" type="VBoxContainer" parent="BottomPanel"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -30.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ExpLabel" type="Label" parent="BottomPanel/ExpContainer"]
+layout_mode = 2
+text = "0 / 100"
+
+[node name="ExpBar" type="ProgressBar" parent="BottomPanel/ExpContainer"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+max_value = 100.0
+value = 0.0
+show_percentage = false

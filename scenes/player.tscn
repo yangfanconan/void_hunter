@@ -1,0 +1,68 @@
+[gd_scene load_steps=4 format=3 uid="uid://player_scene_001"]
+
+[ext_resource type="Script" path="res://src/player/player.gd" id="script_player"]
+[ext_resource type="Script" path="res://src/player/player_stats.gd" id="script_stats"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_collision"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hitbox"]
+radius = 18.0
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 6
+script = ExtResource("script_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_collision")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(0.3, 0.6, 0.9, 1)
+scale = Vector2(0.5, 0.5)
+
+[node name="Stats" type="Node" parent="."]
+script = ExtResource("script_stats")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+zoom = Vector2(1.5, 1.5)
+limit_smoothed = true
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+
+[node name="Hitbox" type="Area2D" parent="."]
+collision_layer = 1
+collision_mask = 4
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("CircleShape2D_hitbox")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("CircleShape2D_hitbox")
+
+[node name="WeaponPivot" type="Node2D" parent="."]
+
+[node name="ShootPoint" type="Marker2D" parent="WeaponPivot"]
+position = Vector2(25, 0)
+
+[node name="Effects" type="Node2D" parent="."]
+
+[node name="InvincibilityTimer" type="Timer" parent="."]
+wait_time = 1.0
+one_shot = true
+
+[node name="DashCooldownTimer" type="Timer" parent="."]
+wait_time = 3.0
+one_shot = true
+
+[node name="DashDurationTimer" type="Timer" parent="."]
+wait_time = 0.2
+one_shot = true
+
+[node name="RegenTimer" type="Timer" parent="."]
+wait_time = 1.0
+autostart = true
