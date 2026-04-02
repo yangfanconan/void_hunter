@@ -333,12 +333,6 @@ func die(killer: Node = null) -> void:
 	queue_free()
 
 
-## 眩晕
-func stun(duration: float) -> void:
-	"""眩晕敌人"""
-	_stun_timer = duration
-	_change_state(State.STUNNED)
-
 # =============================================================================
 # 公共方法 - 状态
 # =============================================================================
@@ -374,11 +368,7 @@ func clear_target() -> void:
 # =============================================================================
 
 ## 击退
-func knockback(direction: Vector2, force: float) -> void:
-	"""击退"""
-	_knockback_velocity = direction.normalized() * force
-	is_knockback = true
-
+# knockback函数在文件末尾实现
 
 ## 停止移动
 func stop_movement() -> void:

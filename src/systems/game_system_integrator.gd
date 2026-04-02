@@ -157,7 +157,7 @@ func setup_player(player: Node) -> void:
 
 	# 将天赋加成应用给玩家（如果玩家有 apply_talent_bonuses 方法）
 	if talent_tree and player.has_method("apply_talent_bonuses"):
-		var bonuses := talent_tree.calculate_all_bonuses()
+		var bonuses: Dictionary = talent_tree.calculate_all_bonuses()
 		player.apply_talent_bonuses(bonuses)
 
 	print("[GameSystemV2] 玩家系统初始化完成")
@@ -173,7 +173,7 @@ func setup_wave_theme(wave: int) -> void:
 
 	# 防御天赋：每波开始给予护盾
 	if talent_tree and _player_ref:
-		var bonuses := talent_tree.calculate_all_bonuses()
+		var bonuses: Dictionary = talent_tree.calculate_all_bonuses()
 		var shield_amount: float = bonuses.get("shield_amount", 0.0)
 		if shield_amount > 0.0 and status_effect_manager:
 			status_effect_manager.apply_shield(_player_ref, shield_amount)
