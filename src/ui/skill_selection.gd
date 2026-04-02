@@ -48,11 +48,17 @@ func _build_ui() -> void:
 	add_child(_bg)
 
 	_panel = PanelContainer.new()
-	_panel.set_anchors_preset(Control.PRESET_CENTER)
+	# 使用正确的居中方式
+	_panel.anchor_left = 0.5
+	_panel.anchor_top = 0.5
+	_panel.anchor_right = 0.5
+	_panel.anchor_bottom = 0.5
 	_panel.offset_left = -350.0
 	_panel.offset_top = -220.0
 	_panel.offset_right = 350.0
 	_panel.offset_bottom = 220.0
+	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.1, 0.1, 0.15, 0.97)
 	panel_style.border_color = Color(0.4, 0.35, 0.6)

@@ -82,13 +82,18 @@ func _build_ui() -> void:
 	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_bg)
 
-	# 主面板
+	# 主面板 - 使用正确的居中方式
 	_main_panel = PanelContainer.new()
-	_main_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_main_panel.anchor_left = 0.5
+	_main_panel.anchor_top = 0.5
+	_main_panel.anchor_right = 0.5
+	_main_panel.anchor_bottom = 0.5
 	_main_panel.offset_left = -400.0
 	_main_panel.offset_top = -350.0
 	_main_panel.offset_right = 400.0
 	_main_panel.offset_bottom = 350.0
+	_main_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_main_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
 	style.border_color = Color(0.4, 0.35, 0.6)
