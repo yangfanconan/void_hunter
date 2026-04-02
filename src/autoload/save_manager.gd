@@ -40,7 +40,7 @@ func _initialize() -> void:
 	# 确保存档目录存在
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR.get_base_dir())
 	# 加载设置
-	_load_settings()
+	load_settings()
 	_initialized = true
 	print("[SaveManager] 初始化完成")
 
