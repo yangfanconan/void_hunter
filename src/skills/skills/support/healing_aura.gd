@@ -176,7 +176,13 @@ func _get_allies_in_range() -> Array[Node]:
 	# 自己也算
 	allies.append(owner_node)
 	
-	# TODO: 添加其他友方单位的检测逻辑
+	# 检测范围内其他友方单位
+	var bodies := owner_node.get_tree().get_nodes_in_group("allies")
+	for body in bodies:
+		if body == owner_node:
+			continue
+		if owner_node.global_position.distance_to(body.global_position) <= get_aura_radius():
+			allies.append(body)
 	
 	return allies
 

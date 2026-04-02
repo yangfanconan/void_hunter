@@ -190,12 +190,15 @@ func get_kill_streak() -> int:
 
 ## 重置所有系统（新游戏开始）
 func reset_all() -> void:
+	"""重置所有系统（新游戏开始时调用）"""
 	if combo_system and combo_system.has_method("reset"):
 		combo_system.reset()
 	if status_effect_manager:
-		pass
-	if item_set_system:
-		pass
+		status_effect_manager.remove_all_status(_get_player())
+	if item_set_system and item_set_system.has_method("reset"):
+		item_set_system.reset()
+	if talent_tree and talent_tree.has_method("reset"):
+		talent_tree.reset()
 
 ## 获取结算数据
 func get_run_stats() -> Dictionary:

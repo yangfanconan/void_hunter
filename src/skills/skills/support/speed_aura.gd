@@ -161,19 +161,27 @@ func _remove_speed_bonuses() -> void:
 
 
 func _apply_to_allies() -> void:
-	"""
-	对友方应用加成
-	"""
-	# TODO: 实现友方单位的加成逻辑
-	pass
+	"""对友方应用加成"""
+	_affected_allies.clear()
+	var allies := _get_allies_in_range()
+	for ally in allies:
+		if ally == owner_node:
+			continue
+		if "stats" in ally:
+			var ally_stats = ally.stats
+			if ally_stats and "speed_bonus_percent" in ally_stats:
+				ally_stats.speed_bonus_percent += get_movement_bonus()
+				_affected_allies.append(ally)
 
 
 func _remove_from_allies() -> void:
-	"""
-	移除友方加成
-	"""
-	# TODO: 实现移除友方加成的逻辑
-	pass
+	"""移除友方加成"""
+	for ally in _affected_allies:
+		if is_instance_valid(ally) and "stats" in ally:
+			var ally_stats = ally.stats
+			if ally_stats and "speed_bonus_percent" in ally_stats:
+				ally_stats.speed_bonus_percent -= get_movement_bonus()
+	_affected_allies.clear()
 
 
 # =============================================================================
@@ -270,3 +278,19 @@ func _on_level_up(new_level: int) -> void:
 			aura_radius = 180.0
 			cooldown_reduction = 0.15
 			affect_allies = true
+
+
+
+func _get_allies_in_range() -> Array[Node]:
+	"""获取范围内的友方单位"""
+	var allies: Array[Node] = []
+	if owner_node == null:
+		return allies
+	var space_state := owner_node.get_world_2d().direct_space_state
+	var bodies := owner_node.get_tree().get_nodes_in_group("allies")
+	for body in bodies:
+		if body == owner_node:
+			continue
+		if owner_node.global_position.distance_to(body.global_position) <= get_aura_radius():
+			allies.append(body)
+	return allies
