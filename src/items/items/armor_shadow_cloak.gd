@@ -29,38 +29,43 @@ func _setup_item() -> void:
 	item_id = ITEM_ID
 	item_name = ITEM_NAME
 	description = ITEM_DESCRIPTION
-	
+
 	item_type = ItemType.EQUIPMENT
 	rarity = ItemRarity.LEGENDARY
 	equip_slot = EquipSlot.ARMOR
-	
+
 	max_stack = 1
 	current_stack = 1
 	can_drop = true
 	sellable = true
 	sell_price = 800
 	buy_price = 2400
-	
+
 	# 设置属性加成
 	stat_bonuses = {
 		"defense": DEFENSE_BONUS,
 		"dodge_chance": DODGE_CHANCE
 	}
-	
+
 	is_temporary = false
 
 
 func _apply_equipment_effects(target: Node) -> void:
 	"""应用装备效果"""
 	super._apply_equipment_effects(target)
-	
-	# 添加闪避效果
-	# TODO: 在玩家属性中添加闪避机制
+
+	# 添加闪避率到玩家属性
+	if "stats" in target and target.stats is PlayerStats:
+		target.stats.add_flat_bonus("dodge_chance", DODGE_CHANCE)
 
 
 func _remove_equipment_effects(target: Node) -> void:
 	"""移除装备效果"""
 	super._remove_equipment_effects(target)
+
+	# 移除闪避率
+	if "stats" in target and target.stats is PlayerStats:
+		target.stats.remove_flat_bonus("dodge_chance", DODGE_CHANCE)
 
 
 func get_item_info() -> Dictionary:

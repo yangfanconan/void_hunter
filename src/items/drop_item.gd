@@ -1,7 +1,7 @@
-## Void Hunter - 道具掉落系统
+## Void Hunter - 掉落物节点
 ## @description: 管理敌人死亡后的道具掉落，包括金币、药水、稀有道具等
 ## @author: Void Hunter Team
-## @version: 1.0.0
+## @version: 1.1.0
 
 extends Area2D
 
@@ -104,11 +104,11 @@ func _physics_process(delta: float) -> void:
 	"""物理帧更新"""
 	# 更新存在时间
 	_update_despawn(delta)
-	
+
 	# 检查拾取
 	if auto_pickup:
 		_check_pickup(delta)
-	
+
 	# 应用移动
 	_apply_movement(delta)
 
@@ -136,6 +136,14 @@ func set_item_data(data: Dictionary) -> void:
 	item_data = data
 
 
+## 设置吸引目标（用于磁铁技能）
+func set_target(target: Node) -> void:
+	"""设置吸引目标"""
+	_player = target
+	if target != null:
+		is_being_attracted = true
+
+
 ## 从掉落表创建
 static func create_drop(drop_type: int, position: Vector2, value: int = 1) -> Node2D:
 	"""静态方法：创建掉落物"""
@@ -145,12 +153,12 @@ static func create_drop(drop_type: int, position: Vector2, value: int = 1) -> No
 	drop.global_position = position
 	drop.set("drop_type", drop_type)
 	drop.set("drop_value", value)
-	
+
 	# 随机弹跳方向
 	var angle: float = randf() * TAU
 	var speed: float = randf_range(100.0, BOUNCE_FORCE)
 	drop.set("velocity", Vector2(cos(angle), sin(angle)) * speed)
-	
+
 	return drop
 
 # =============================================================================
@@ -170,19 +178,20 @@ func _initialize_drop() -> void:
 	"""初始化掉落物内部状态"""
 	_despawn_timer = DESPAWN_TIME
 	_is_blinking = false
-	
+
 	# 确保有碰撞
 	_ensure_collision()
-	
+
 	# 确保有视觉效果
 	_ensure_visual()
-	
+
 	# 设置掉落物数据
 	_setup_item_data()
-	
+
 	# 添加到掉落物组
 	add_to_group("drop_items")
-	
+	add_to_group("drops")
+
 	# 入场动画
 	_play_spawn_animation()
 
@@ -192,7 +201,7 @@ func _ensure_collision() -> void:
 	for child in get_children():
 		if child is CollisionShape2D:
 			return
-	
+
 	# 创建碰撞形状
 	var collision := CollisionShape2D.new()
 	collision.name = "CollisionShape2D"
@@ -208,11 +217,11 @@ func _ensure_visual() -> void:
 		if child is Sprite2D:
 			_sprite = child
 			return
-	
+
 	# 创建精灵
 	_sprite = Sprite2D.new()
 	_sprite.name = "Sprite"
-	
+
 	# 尝试从 SpriteManager 加载道具图标
 	var type_name := _get_type_name()
 	var icon_loaded := false
@@ -221,13 +230,13 @@ func _ensure_visual() -> void:
 		if icon:
 			_sprite.texture = icon
 			icon_loaded = true
-	
+
 	if not icon_loaded:
 		# 后备：色块
 		var texture := ImageTexture.new()
 		var image: Image
 		var color: Color
-		
+
 		match drop_type:
 			DropType.GOLD:
 				color = Color(1.0, 0.85, 0.0)
@@ -247,11 +256,11 @@ func _ensure_visual() -> void:
 			_:
 				color = Color.WHITE
 				image = Image.create(10, 10, false, Image.FORMAT_RGBA8)
-		
+
 		image.fill(color)
 		texture.set_image(image)
 		_sprite.texture = texture
-	
+
 	add_child(_sprite)
 
 
@@ -262,7 +271,7 @@ func _setup_item_data() -> void:
 		"value": drop_value,
 		"type_name": _get_type_name()
 	}
-	
+
 	# 根据类型设置额外数据
 	match drop_type:
 		DropType.GOLD:
@@ -306,12 +315,12 @@ func _find_player() -> void:
 func _update_despawn(delta: float) -> void:
 	"""更新存在时间"""
 	_despawn_timer -= delta
-	
+
 	# 检查是否开始闪烁
 	if _despawn_timer <= BLINK_WARNING_TIME and not _is_blinking:
 		_is_blinking = true
 		_start_blinking()
-	
+
 	# 检查是否消失
 	if _despawn_timer <= 0:
 		_despawn()
@@ -322,18 +331,19 @@ func _check_pickup(delta: float) -> void:
 	if _player == null or not is_instance_valid(_player):
 		_find_player()
 		return
-	
+
 	var distance: float = global_position.distance_to(_player.global_position)
-	
+
 	# 检查是否在吸引范围内
 	if distance <= ATTRACT_RANGE:
 		is_being_attracted = true
-		# 向玩家移动
+		# 向玩家移动，距离越近速度越快
 		var direction: Vector2 = (_player.global_position - global_position).normalized()
-		velocity = direction * ATTRACT_SPEED
+		var speed_multiplier: float = 1.0 + (1.0 - distance / ATTRACT_RANGE) * 2.0
+		velocity = direction * ATTRACT_SPEED * speed_multiplier
 	else:
 		is_being_attracted = false
-	
+
 	# 检查是否在拾取范围内
 	if distance <= PICKUP_RANGE:
 		_do_pickup()
@@ -347,10 +357,10 @@ func _apply_movement(delta: float) -> void:
 	else:
 		# 正常物理移动
 		global_position += velocity * delta
-		
+
 		# 应用阻尼
 		velocity = velocity * BOUNCE_DAMPING
-		
+
 		# 如果速度很小，停止移动
 		if velocity.length() < 5.0:
 			velocity = Vector2.ZERO
@@ -360,32 +370,37 @@ func _update_visuals() -> void:
 	"""更新视觉效果"""
 	if _sprite == null:
 		return
-	
+
 	# 悬浮动画
 	var time := Time.get_ticks_msec() / 1000.0
 	var bob_offset := sin(time * 3.0) * 2.0
 	_sprite.position.y = bob_offset
-	
-	# 旋转
+
+	# 旋转（金币旋转效果）
 	if drop_type == DropType.GOLD:
 		_sprite.rotation += 0.02
+
+	# 稀有道具发光效果
+	if drop_type == DropType.RARE_ITEM:
+		var glow: float = 0.7 + sin(time * 2.0) * 0.3
+		_sprite.modulate.a = glow
 
 
 func _do_pickup() -> void:
 	"""执行拾取"""
 	# 应用效果
 	_apply_pickup_effect()
-	
+
 	# 触发信号
 	item_picked_up.emit(item_data)
-	
+
 	# 播放拾取音效
 	AudioManager.play_sfx("pickup", 0.5)
-	
+
 	# 拾取特效
 	if VFXManager:
 		VFXManager.spawn_heal_sparkle(global_position)
-	
+
 	# 拾取动画后删除
 	_play_pickup_animation()
 
@@ -396,32 +411,43 @@ func _apply_pickup_effect() -> void:
 		_find_player()
 		if _player == null:
 			return
-	
+
 	match drop_type:
 		DropType.GOLD:
 			# 金币
 			GameManager.add_gold(drop_value)
-		
+
 		DropType.HEALTH_POTION:
 			# 生命药水
 			if _player.has_method("heal"):
 				_player.heal(drop_value)
-		
+
 		DropType.MANA_POTION:
 			# 法力药水
 			if _player.has_method("restore_mana"):
 				_player.restore_mana(drop_value)
 			elif "current_mana" in _player and "max_mana" in _player:
 				_player.current_mana = min(_player.current_mana + drop_value, _player.max_mana)
-		
+
 		DropType.EXP_GEM:
 			# 经验宝石
 			if _player.has_method("gain_experience"):
 				_player.gain_experience(drop_value)
-		
+
 		DropType.RARE_ITEM:
-			# 稀有道具 - 添加到物品栏或直接应用效果
-			print("[DropItem] 玩家获得稀有道具!")
+			# 稀有道具 - 通知掉落系统生成一个随机稀有装备
+			_notify_rare_item_pickup()
+
+
+## 稀有道具拾取处理
+func _notify_rare_item_pickup() -> void:
+	"""稀有道具拾取：查找场景中的掉落系统并生成一件随机装备"""
+	var drop_systems: Array[Node] = get_tree().get_nodes_in_group("drop_system")
+	for ds in drop_systems:
+		if ds.has_method("spawn_drop"):
+			# 生成一件装备（使用精英级别稀有度权重）
+			ds.spawn_drop(global_position, "elite", false, false)
+			break
 
 
 func _despawn() -> void:
@@ -436,7 +462,7 @@ func _despawn() -> void:
 func _play_spawn_animation() -> void:
 	"""播放生成动画"""
 	scale = Vector2.ZERO
-	
+
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_ELASTIC)
@@ -447,12 +473,12 @@ func _play_pickup_animation() -> void:
 	"""播放拾取动画"""
 	if _tween:
 		_tween.kill()
-	
+
 	_tween = create_tween()
 	_tween.set_parallel(true)
 	_tween.tween_property(self, "scale", Vector2.ZERO, 0.2)
 	_tween.tween_property(self, "modulate:a", 0.0, 0.2)
-	
+
 	_tween.tween_callback(queue_free)
 
 
@@ -460,7 +486,7 @@ func _start_blinking() -> void:
 	"""开始闪烁"""
 	if _sprite == null:
 		return
-	
+
 	# 创建闪烁动画
 	var tween := create_tween()
 	tween.set_loops()
@@ -480,7 +506,7 @@ static func generate_drops_from_table(drop_table: Array, position: Vector2) -> A
 	@return: 生成的掉落物数组
 	"""
 	var drops: Array = []
-	
+
 	for entry in drop_table:
 		var chance: float = entry.get("chance", 1.0)
 		if randf() <= chance:
@@ -488,14 +514,14 @@ static func generate_drops_from_table(drop_table: Array, position: Vector2) -> A
 			var value: int = entry.get("value", 1)
 			var min_value: int = entry.get("min_value", value)
 			var max_value: int = entry.get("max_value", value)
-			
+
 			# 随机值
 			if min_value != max_value:
 				value = randi_range(min_value, max_value)
-			
+
 			var drop := create_drop(type, position, value)
 			drops.append(drop)
-	
+
 	return drops
 
 
@@ -507,7 +533,7 @@ static func get_default_enemy_drop_table(enemy_type: String) -> Array:
 	@return: 掉落表
 	"""
 	var table: Array = []
-	
+
 	# 使用整数代替枚举
 	# 0 = GOLD, 1 = HEALTH_POTION, 2 = MANA_POTION, 3 = EXP_GEM, 4 = RARE_ITEM
 	match enemy_type:
@@ -545,5 +571,5 @@ static func get_default_enemy_drop_table(enemy_type: String) -> Array:
 			table = [
 				{"type": 0, "chance": 0.5, "value": 1}
 			]
-	
+
 	return table

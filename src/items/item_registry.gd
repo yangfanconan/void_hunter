@@ -1,7 +1,7 @@
 ## Void Hunter - 道具注册表
 ## @description: 统一管理所有道具的注册、创建和查询
 ## @author: Void Hunter Team
-## @version: 0.1.0
+## @version: 0.2.0
 
 extends Node
 class_name ItemRegistry
@@ -23,10 +23,7 @@ signal item_created(item_id: String, item_node: Node)
 static var _instance: ItemRegistry = null
 
 static func get_instance() -> ItemRegistry:
-	"""
-	获取单例实例
-	@return: ItemRegistry实例
-	"""
+	"""获取单例实例"""
 	return _instance
 
 # =============================================================================
@@ -41,26 +38,26 @@ const ITEM_SCRIPTS: Dictionary = {
 	"weapon_shadow_dagger": "res://src/items/items/weapon_shadow_dagger.gd",
 	"weapon_dragon_breath": "res://src/items/items/weapon_dragon_breath.gd",
 	"weapon_void_blade": "res://src/items/items/weapon_void_blade.gd",
-	
+
 	# 防具类
 	"armor_cloth": "res://src/items/items/armor_cloth.gd",
 	"armor_iron": "res://src/items/items/armor_iron.gd",
 	"armor_holy_light": "res://src/items/items/armor_holy_light.gd",
 	"armor_shadow_cloak": "res://src/items/items/armor_shadow_cloak.gd",
 	"armor_void_shield": "res://src/items/items/armor_void_shield.gd",
-	
+
 	# 饰品类
 	"accessory_ring_of_power": "res://src/items/items/accessory_ring_of_power.gd",
 	"accessory_necklace_of_agility": "res://src/items/items/accessory_necklace_of_agility.gd",
 	"accessory_gem_of_wisdom": "res://src/items/items/accessory_gem_of_wisdom.gd",
 	"accessory_lucky_charm": "res://src/items/items/accessory_lucky_charm.gd",
 	"accessory_hourglass_of_time": "res://src/items/items/accessory_hourglass_of_time.gd",
-	
+
 	# 消耗品类
 	"consumable_health_potion": "res://src/items/items/consumable_health_potion.gd",
 	"consumable_mana_potion": "res://src/items/items/consumable_mana_potion.gd",
 	"consumable_elixir": "res://src/items/items/consumable_elixir.gd",
-	
+
 	# 特殊道具
 	"special_exp_gem": "res://src/items/items/special_exp_gem.gd",
 	"special_revive_cross": "res://src/items/items/special_revive_cross.gd"
@@ -95,55 +92,45 @@ func _exit_tree() -> void:
 
 ## 创建道具实例
 func create_item(item_id: String, stack_count: int = 1) -> Node:
-	"""
-	创建道具实例
-	@param item_id: 道具ID
-	@param stack_count: 堆叠数量
-	@return: 道具节点
-	"""
+	"""创建道具实例"""
 	if not ITEM_SCRIPTS.has(item_id):
 		push_error("未知的道具ID: " + item_id)
 		return null
-	
+
 	var script_path: String = ITEM_SCRIPTS[item_id]
 	var script: Script = _get_or_load_script(script_path)
-	
+
 	if script == null:
 		push_error("无法加载道具脚本: " + script_path)
 		return null
-	
+
 	# 创建节点
 	var item_node: Node = _create_item_node_from_script(script)
-	
+
 	if item_node == null:
 		return null
-	
+
 	# 设置堆叠数量
 	if "current_stack" in item_node:
 		item_node.current_stack = mini(stack_count, item_node.max_stack)
-	
+
 	item_created.emit(item_id, item_node)
-	
+
 	return item_node
 
 
 ## 创建道具数据字典
 func create_item_data(item_id: String, stack_count: int = 1) -> Dictionary:
-	"""
-	创建道具数据字典（用于背包系统）
-	@param item_id: 道具ID
-	@param stack_count: 堆叠数量
-	@return: 道具数据字典
-	"""
+	"""创建道具数据字典（用于背包系统）"""
 	if not ITEM_SCRIPTS.has(item_id):
 		return {}
-	
+
 	# 从元数据获取信息
 	var metadata: Dictionary = get_item_metadata(item_id)
-	
+
 	if metadata.is_empty():
 		return {}
-	
+
 	return {
 		"id": item_id,
 		"name": metadata.get("name", "Unknown"),
@@ -168,94 +155,71 @@ func create_item_data(item_id: String, stack_count: int = 1) -> Dictionary:
 
 ## 获取所有道具ID
 func get_all_item_ids() -> Array:
-	"""
-	获取所有已注册的道具ID
-	@return: 道具ID数组
-	"""
+	"""获取所有已注册的道具ID"""
 	return ITEM_SCRIPTS.keys()
 
 
 ## 检查道具是否存在
 func has_item(item_id: String) -> bool:
-	"""
-	检查道具是否已注册
-	@param item_id: 道具ID
-	@return: 是否存在
-	"""
+	"""检查道具是否已注册"""
 	return ITEM_SCRIPTS.has(item_id)
 
 
 ## 获取道具元数据
 func get_item_metadata(item_id: String) -> Dictionary:
-	"""
-	获取道具元数据
-	@param item_id: 道具ID
-	@return: 元数据字典
-	"""
+	"""获取道具元数据"""
 	if _item_metadata.has(item_id):
 		return _item_metadata[item_id]
-	
+
 	# 尝试从脚本加载元数据
 	var item_node: Node = create_item(item_id)
 	if item_node == null:
 		return {}
-	
+
 	var metadata: Dictionary = _extract_metadata_from_node(item_node)
 	_item_metadata[item_id] = metadata
-	
+
 	item_node.queue_free()
-	
+
 	return metadata
 
 
 ## 获取指定稀有度的道具列表
 func get_items_by_rarity(rarity: int) -> Array[String]:
-	"""
-	获取指定稀有度的所有道具ID
-	@param rarity: 稀有度
-	@return: 道具ID数组
-	"""
+	"""获取指定稀有度的所有道具ID"""
 	var result: Array[String] = []
-	
+
 	for item_id in ITEM_SCRIPTS:
 		var metadata: Dictionary = get_item_metadata(item_id)
 		if metadata.get("rarity", -1) == rarity:
 			result.append(item_id)
-	
+
 	return result
 
 
 ## 获取指定类型的道具列表
 func get_items_by_type(type: int) -> Array[String]:
-	"""
-	获取指定类型的所有道具ID
-	@param type: 道具类型
-	@return: 道具ID数组
-	"""
+	"""获取指定类型的所有道具ID"""
 	var result: Array[String] = []
-	
+
 	for item_id in ITEM_SCRIPTS:
 		var metadata: Dictionary = get_item_metadata(item_id)
 		if metadata.get("type", -1) == type:
 			result.append(item_id)
-	
+
 	return result
 
 
 ## 获取指定装备槽的道具列表
 func get_items_by_equip_slot(slot: int) -> Array[String]:
-	"""
-	获取指定装备槽的所有道具ID
-	@param slot: 装备槽类型
-	@return: 道具ID数组
-	"""
+	"""获取指定装备槽的所有道具ID"""
 	var result: Array[String] = []
-	
+
 	for item_id in ITEM_SCRIPTS:
 		var metadata: Dictionary = get_item_metadata(item_id)
 		if metadata.get("equip_slot", ItemBase.EquipSlot.NONE) == slot:
 			result.append(item_id)
-	
+
 	return result
 
 # =============================================================================
@@ -264,24 +228,18 @@ func get_items_by_equip_slot(slot: int) -> Array[String]:
 
 ## 获取道具总数
 func get_total_item_count() -> int:
-	"""
-	获取已注册的道具总数
-	@return: 道具总数
-	"""
+	"""获取已注册的道具总数"""
 	return ITEM_SCRIPTS.size()
 
 
 ## 获取各稀有度道具数量
 func get_rarity_counts() -> Dictionary:
-	"""
-	获取各稀有度的道具数量
-	@return: 稀有度数量字典
-	"""
+	"""获取各稀有度的道具数量"""
 	var counts: Dictionary = {}
-	
+
 	for rarity in ItemBase.ItemRarity.values():
 		counts[rarity] = get_items_by_rarity(rarity).size()
-	
+
 	return counts
 
 # =============================================================================
@@ -296,44 +254,44 @@ func _preload_item_scripts() -> void:
 
 
 func _get_or_load_script(script_path: String) -> Script:
-	"""
-	获取或加载脚本
-	@param script_path: 脚本路径
-	@return: 脚本对象
-	"""
+	"""获取或加载脚本"""
 	if _loaded_scripts.has(script_path):
 		return _loaded_scripts[script_path]
-	
+
 	var script: Script = load(script_path)
 	if script != null:
 		_loaded_scripts[script_path] = script
-	
+
 	return script
 
 
 func _create_item_node_from_script(script: Script) -> Node:
-	"""
-	从脚本创建道具节点
-	@param script: 脚本对象
-	@return: 道具节点
-	"""
-	var item_node: Node = Node.new()
+	"""从脚本创建道具节点"""
+	# 道具基类是Area2D，需要使用Area2D作为基础节点
+	var item_node: Area2D = Area2D.new()
 	item_node.set_script(script)
-	
-	# 调用_ready初始化
-	item_node._ready()
-	
+
+	# 添加必要的子节点（碰撞和精灵），以便_ready中能找到它们
+	var collision := CollisionShape2D.new()
+	var shape := CircleShape2D.new()
+	shape.radius = 16.0
+	collision.shape = shape
+	item_node.add_child(collision)
+
+	var sprite := Sprite2D.new()
+	item_node.add_child(sprite)
+
+	# 手动调用初始化（节点尚未加入场景树，_ready不会自动调用）
+	if item_node.has_method("_ready"):
+		item_node._ready()
+
 	return item_node
 
 
 func _extract_metadata_from_node(item_node: Node) -> Dictionary:
-	"""
-	从道具节点提取元数据
-	@param item_node: 道具节点
-	@return: 元数据字典
-	"""
+	"""从道具节点提取元数据"""
 	var metadata: Dictionary = {}
-	
+
 	# 提取基本属性
 	if "item_id" in item_node:
 		metadata["id"] = item_node.item_id
@@ -359,5 +317,5 @@ func _extract_metadata_from_node(item_node: Node) -> Dictionary:
 		metadata["stat_bonuses"] = item_node.stat_bonuses
 	if "icon" in item_node:
 		metadata["icon"] = item_node.icon
-	
+
 	return metadata

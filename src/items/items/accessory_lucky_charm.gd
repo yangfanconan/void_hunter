@@ -1,7 +1,7 @@
 ## Void Hunter - 幸运护符
 ## @description: 史诗稀有度饰品，暴击+10%，掉落率+20%
 ## @author: Void Hunter Team
-## @version: 0.1.0
+## @version: 0.2.0
 
 extends "res://src/items/item_base.gd"
 class_name AccessoryLuckyCharm
@@ -29,45 +29,54 @@ func _setup_item() -> void:
 	item_id = ITEM_ID
 	item_name = ITEM_NAME
 	description = ITEM_DESCRIPTION
-	
+
 	item_type = ItemType.EQUIPMENT
 	rarity = ItemRarity.EPIC
 	equip_slot = EquipSlot.ACCESSORY
-	
+
 	max_stack = 1
 	current_stack = 1
 	can_drop = true
 	sellable = true
 	sell_price = 350
 	buy_price = 1000
-	
+
 	# 设置属性加成
 	stat_bonuses = {
 		"critical_chance": CRITICAL_CHANCE_BONUS,
 		"drop_rate": DROP_RATE_BONUS
 	}
-	
+
 	is_temporary = false
 
 
-func _apply_equipment_effects(target: Node) -> void:
-	"""应用装备效果"""
-	super._apply_equipment_effects(target)
-	
+func _on_equip(target: Node) -> void:
+	"""装备时触发"""
+	# 增加暴击率
 	if "stats" in target and target.stats is PlayerStats:
-		# 增加暴击率
 		target.stats.critical_chance += CRITICAL_CHANCE_BONUS
-	
-	# 增加掉落率（需要在掉落系统中处理）
-	# DropSystem.modify_drop_rate(DROP_RATE_BONUS)
+
+	# 增加掉落率 - 查找场景中的掉落系统
+	_apply_drop_rate_bonus(DROP_RATE_BONUS)
 
 
-func _remove_equipment_effects(target: Node) -> void:
-	"""移除装备效果"""
-	super._remove_equipment_effects(target)
-	
+func _on_unequip(target: Node) -> void:
+	"""卸下时触发"""
+	# 移除暴击率加成
 	if "stats" in target and target.stats is PlayerStats:
 		target.stats.critical_chance -= CRITICAL_CHANCE_BONUS
+
+	# 移除掉落率加成
+	_apply_drop_rate_bonus(-DROP_RATE_BONUS)
+
+
+func _apply_drop_rate_bonus(bonus: float) -> void:
+	"""应用/移除掉落率加成到掉落系统"""
+	var drop_systems: Array[Node] = get_tree().get_nodes_in_group("drop_system")
+	for ds in drop_systems:
+		if ds.has_method("add_drop_rate_bonus"):
+			ds.add_drop_rate_bonus(bonus)
+		break
 
 
 func get_item_info() -> Dictionary:

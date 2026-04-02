@@ -51,10 +51,9 @@ func _setup_item() -> void:
 
 func _on_equip(target: Node) -> void:
 	"""装备时触发"""
-	super._on_equip(target)
-	# 可以添加装备特效，如音效或粒子效果
+	# 新手短剑没有特殊效果，基类已处理属性加成
 
 
 func _on_unequip(target: Node) -> void:
 	"""卸下时触发"""
-	super._on_unequip(target)
+	# 新手短剑没有特殊效果，基类已处理属性移除

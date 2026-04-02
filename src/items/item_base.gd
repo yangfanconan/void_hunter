@@ -1,7 +1,7 @@
 ## Void Hunter - 道具基类
 ## @description: 所有道具的基类，定义道具的基本属性和拾取行为
 ## @author: Void Hunter Team
-## @version: 0.1.0
+## @version: 0.2.0
 
 extends Area2D
 class_name ItemBase
@@ -202,42 +202,36 @@ var _is_picked_up: bool = false
 var _is_flashing: bool = false
 var _sprite: Sprite2D
 var _collision: CollisionShape2D
+## 临时效果的计时器引用，用于取消
+var _temp_effect_timer: SceneTreeTimer = null
 
 # =============================================================================
 # 生命周期方法
 # =============================================================================
 
 func _ready() -> void:
-	"""
-	节点就绪时初始化道具
-	"""
+	"""节点就绪时初始化道具"""
 	_initialize_item()
 
 
 func _physics_process(delta: float) -> void:
-	"""
-	物理帧更新
-	@param delta: 帧间隔时间
-	"""
+	"""物理帧更新"""
 	if not is_in_world or _is_picked_up:
 		return
-	
+
 	# 更新存在时间
 	_update_lifetime(delta)
-	
+
 	# 检查磁铁吸引
 	_check_magnet_attraction(delta)
-	
+
 	# 更新吸引移动
 	if is_being_attracted and attract_target != null:
 		_move_towards_target(delta)
 
 
 func _on_body_entered(body: Node) -> void:
-	"""
-	物体进入检测区域
-	@param body: 进入的物体
-	"""
+	"""物体进入检测区域"""
 	if pickup_type == PickupType.CONTACT and _is_valid_picker(body):
 		pickup(body)
 
@@ -248,9 +242,7 @@ func _on_body_entered(body: Node) -> void:
 
 ## 初始化道具
 func initialize() -> void:
-	"""
-	手动初始化道具
-	"""
+	"""手动初始化道具"""
 	_initialize_item()
 
 
@@ -267,23 +259,22 @@ func pickup(picker: Node) -> bool:
 	"""
 	if _is_picked_up:
 		return false
-	
+
 	if not _is_valid_picker(picker):
 		return false
-	
-	# 检查背包空间（如果有背包系统）
-	# if not _check_inventory_space(picker):
-	#     return false
-	
+
 	_is_picked_up = true
 	owner_node = picker
-	
-	# 执行拾取效果
+
+	# 执行拾取回调（子类可重写）
 	_on_pickup(picker)
-	
+
+	# 通知图鉴系统记录发现
+	_notify_codex(picker)
+
 	# 应用即时效果
 	_apply_immediate_effects(picker)
-	
+
 	# 如果是临时道具或消耗品，直接消耗
 	if item_type == ItemType.CONSUMABLE or is_temporary:
 		# 如果是临时效果，设置定时器
@@ -294,12 +285,12 @@ func pickup(picker: Node) -> bool:
 	else:
 		# 否则添加到背包
 		_add_to_inventory(picker)
-	
+
 	picked_up.emit(picker)
-	
+
 	# 播放拾取音效
 	AudioManager.play_sfx("item_pickup", 0.8)
-	
+
 	return true
 
 
@@ -313,21 +304,21 @@ func use(user: Node) -> bool:
 	if item_type == ItemType.KEY_ITEM:
 		push_warning("关键道具不能直接使用")
 		return false
-	
-	# 执行使用效果
+
+	# 执行使用回调（子类可重写）
 	_on_use(user)
-	
+
 	# 应用效果
 	_apply_effects(user)
-	
+
 	used.emit(user)
-	
+
 	# 减少堆叠
 	current_stack -= 1
-	
+
 	if current_stack <= 0:
 		_schedule_despawn()
-	
+
 	return true
 
 
@@ -340,37 +331,38 @@ func drop(drop_position: Vector2) -> bool:
 	"""
 	if not can_drop:
 		return false
-	
+
+	# 如果已装备，先卸下
+	if is_equipped and owner_node != null:
+		unequip(owner_node)
+
 	# 从背包移除
 	_remove_from_inventory()
-	
+
 	# 设置位置
 	global_position = drop_position
-	
+
 	# 重置状态
 	is_in_world = true
 	_is_picked_up = false
 	owner_node = null
 	remaining_lifetime = lifetime
-	
+
 	# 显示道具
 	show()
-	
+
 	# 启用碰撞
 	if _collision:
 		_collision.disabled = false
-	
+
 	dropped.emit(drop_position)
-	
+
 	return true
 
 
 ## 设置堆叠数量
 func set_stack_count(count: int) -> void:
-	"""
-	设置堆叠数量
-	@param count: 数量
-	"""
+	"""设置堆叠数量"""
 	current_stack = clampi(count, 1, max_stack)
 
 
@@ -383,17 +375,14 @@ func add_stack(count: int = 1) -> bool:
 	"""
 	if current_stack + count > max_stack:
 		return false
-	
+
 	current_stack += count
 	return true
 
 
 ## 获取道具信息
 func get_item_info() -> Dictionary:
-	"""
-	获取道具信息字典
-	@return: 道具信息
-	"""
+	"""获取道具信息字典"""
 	return {
 		"id": item_id,
 		"name": item_name,
@@ -413,19 +402,13 @@ func get_item_info() -> Dictionary:
 
 ## 获取稀有度颜色
 func get_rarity_color() -> Color:
-	"""
-	获取当前稀有度对应的颜色
-	@return: 稀有度颜色
-	"""
+	"""获取当前稀有度对应的颜色"""
 	return RARITY_COLORS.get(rarity, Color.WHITE)
 
 
 ## 获取稀有度名称
 func get_rarity_name() -> String:
-	"""
-	获取当前稀有度对应的名称
-	@return: 稀有度名称
-	"""
+	"""获取当前稀有度对应的名称"""
 	return RARITY_NAMES.get(rarity, "未知")
 
 
@@ -438,15 +421,21 @@ func equip(target: Node) -> bool:
 	"""
 	if equip_slot == EquipSlot.NONE:
 		return false
-	
+
 	if is_equipped:
 		return false
-	
+
 	is_equipped = true
-	
+
 	# 应用装备效果
 	_apply_equipment_effects(target)
-	
+
+	# 触发装备回调（子类可重写）
+	_on_equip(target)
+
+	# 通知套装系统
+	_notify_set_system(target, true)
+
 	return true
 
 
@@ -459,30 +448,30 @@ func unequip(target: Node) -> bool:
 	"""
 	if not is_equipped:
 		return false
-	
+
 	is_equipped = false
-	
+
 	# 移除装备效果
 	_remove_equipment_effects(target)
-	
+
+	# 触发卸下回调（子类可重写）
+	_on_unequip(target)
+
+	# 通知套装系统
+	_notify_set_system(target, false)
+
 	return true
 
 
 ## 应用装备效果
 func _apply_equipment_effects(target: Node) -> void:
-	"""
-	应用装备效果（子类重写）
-	@param target: 目标
-	"""
+	"""应用装备效果（子类重写以添加特殊效果）"""
 	_apply_effects(target)
 
 
 ## 移除装备效果
 func _remove_equipment_effects(target: Node) -> void:
-	"""
-	移除装备效果
-	@param target: 目标
-	"""
+	"""移除装备效果"""
 	for stat_name in stat_bonuses.keys():
 		var bonus_value: Variant = stat_bonuses[stat_name]
 		_remove_stat_bonus(target, stat_name, bonus_value)
@@ -493,124 +482,103 @@ func _remove_equipment_effects(target: Node) -> void:
 # =============================================================================
 
 func _initialize_item() -> void:
-	"""
-	初始化道具内部状态
-	"""
+	"""初始化道具内部状态"""
 	remaining_lifetime = lifetime
-	
+
 	# 获取组件
 	for child in get_children():
 		if child is Sprite2D:
 			_sprite = child
 		elif child is CollisionShape2D:
 			_collision = child
-	
+
 	# 连接信号
 	if not body_entered.is_connected(_on_body_entered):
 		body_entered.connect(_on_body_entered)
-	
+
 	# 设置碰撞层
 	collision_layer = 16  # Item layer
 	collision_mask = 1	 # Player layer
 
 
 func _update_lifetime(delta: float) -> void:
-	"""
-	更新存在时间
-	@param delta: 帧间隔时间
-	"""
+	"""更新存在时间"""
 	if lifetime <= 0:
 		return  # 永久道具
-	
+
 	remaining_lifetime -= delta
-	
+
 	# 开始闪烁
 	if remaining_lifetime <= FLASH_START_TIME and not _is_flashing:
 		_start_lifetime_flash()
-	
+
 	# 时间到，消失
 	if remaining_lifetime <= 0:
 		_expire()
 
 
-func _check_magnet_attraction(delta: float) -> void:
-	"""
-	检查磁铁吸引
-	@param delta: 帧间隔时间
-	"""
+func _check_magnet_attraction(_delta: float) -> void:
+	"""检查磁铁吸引"""
 	if not magnet_enabled:
 		return
-	
+
 	# 查找附近的玩家
 	var players: Array[Node] = get_tree().get_nodes_in_group("players")
-	
+
 	for player in players:
 		if not is_instance_valid(player):
 			continue
-		
+
 		var distance: float = global_position.distance_to(player.global_position)
-		
+
 		if distance <= MAGNET_RANGE:
 			is_being_attracted = true
 			attract_target = player
 			return
-	
+
 	is_being_attracted = false
 	attract_target = null
 
 
 func _move_towards_target(delta: float) -> void:
-	"""
-	向目标移动
-	@param delta: 帧间隔时间
-	"""
+	"""向目标移动"""
 	if attract_target == null or not is_instance_valid(attract_target):
 		is_being_attracted = false
 		return
-	
+
 	var direction: Vector2 = (attract_target.global_position - global_position).normalized()
 	global_position += direction * ATTRACT_SPEED * delta
-	
-	# 检查是否到达
+
+	# 检查是否到达自动拾取范围
 	var distance: float = global_position.distance_to(attract_target.global_position)
 	if distance <= AUTO_PICKUP_RANGE:
 		pickup(attract_target)
 
 
 func _is_valid_picker(picker: Node) -> bool:
-	"""
-	检查是否是有效的拾取者
-	@param picker: 拾取者
-	@return: 是否有效
-	"""
+	"""检查是否是有效的拾取者"""
 	return picker.is_in_group("players")
 
 
 func _apply_immediate_effects(target: Node) -> void:
-	"""
-	应用即时效果
-	@param target: 目标
-	"""
+	"""应用即时效果"""
 	# 治疗效果
 	if heal_amount > 0:
 		_apply_heal(target, heal_amount)
-	
+
 	# 法力恢复
 	if mana_restore > 0:
 		_apply_mana_restore(target, mana_restore)
-	
+
 	# 给予金币（如果是货币）
 	if item_type == ItemType.CURRENCY:
 		GameManager.gold_collected += current_stack
 
 
 func _apply_effects(target: Node) -> void:
-	"""
-	应用道具效果
-	@param target: 目标
-	"""
+	"""应用道具效果"""
 	_apply_immediate_effects(target)
-	
+
 	# 应用属性加成
 	for stat_name in stat_bonuses.keys():
 		var bonus_value: Variant = stat_bonuses[stat_name]
@@ -618,11 +586,7 @@ func _apply_effects(target: Node) -> void:
 
 
 func _apply_heal(target: Node, amount: float) -> void:
-	"""
-	应用治疗效果
-	@param target: 目标
-	@param amount: 治疗量
-	"""
+	"""应用治疗效果"""
 	if target.has_method("heal"):
 		target.heal(amount)
 	elif "stats" in target and target.stats is PlayerStats:
@@ -630,22 +594,15 @@ func _apply_heal(target: Node, amount: float) -> void:
 
 
 func _apply_mana_restore(target: Node, amount: float) -> void:
-	"""
-	应用法力恢复效果
-	@param target: 目标
-	@param amount: 恢复量
-	"""
-	if "stats" in target and target.stats is PlayerStats:
+	"""应用法力恢复效果"""
+	if target.has_method("restore_mana"):
+		target.restore_mana(amount)
+	elif "stats" in target and target.stats is PlayerStats:
 		target.stats.restore_mana(amount)
 
 
 func _apply_stat_bonus(target: Node, stat_name: String, value: Variant) -> void:
-	"""
-	应用属性加成
-	@param target: 目标
-	@param stat_name: 属性名称
-	@param value: 加成值
-	"""
+	"""应用属性加成"""
 	if "stats" in target and target.stats is PlayerStats:
 		if value is float:
 			target.stats.add_percent_bonus(stat_name, value)
@@ -654,12 +611,7 @@ func _apply_stat_bonus(target: Node, stat_name: String, value: Variant) -> void:
 
 
 func _remove_stat_bonus(target: Node, stat_name: String, value: Variant) -> void:
-	"""
-	移除属性加成
-	@param target: 目标
-	@param stat_name: 属性名称
-	@param value: 加成值
-	"""
+	"""移除属性加成"""
 	if "stats" in target and target.stats is PlayerStats:
 		if value is float:
 			target.stats.remove_percent_bonus(stat_name, value)
@@ -668,33 +620,35 @@ func _remove_stat_bonus(target: Node, stat_name: String, value: Variant) -> void
 
 
 func _start_temporary_effect(target: Node) -> void:
-	"""
-	启动临时效果
-	@param target: 目标
-	"""
+	"""启动临时效果"""
 	# 应用属性加成
 	for stat_name in stat_bonuses.keys():
 		var bonus_value: Variant = stat_bonuses[stat_name]
 		_apply_stat_bonus(target, stat_name, bonus_value)
-	
-	# 设置定时器
-	await get_tree().create_timer(effect_duration).timeout
-	
+
+	# 设置定时器，保存引用以便取消
+	_temp_effect_timer = get_tree().create_timer(effect_duration)
+	await _temp_effect_timer.timeout
+
+	# 检查目标是否仍然有效
+	if not is_instance_valid(target):
+		effect_expired.emit()
+		_schedule_despawn()
+		return
+
 	# 移除属性加成
 	for stat_name in stat_bonuses.keys():
 		var bonus_value: Variant = stat_bonuses[stat_name]
 		_remove_stat_bonus(target, stat_name, bonus_value)
-	
+
 	effect_expired.emit()
 	_schedule_despawn()
 
 
 func _start_lifetime_flash() -> void:
-	"""
-	启动存在时间闪烁效果
-	"""
+	"""启动存在时间闪烁效果"""
 	_is_flashing = true
-	
+
 	var tween: Tween = create_tween()
 	tween.set_loops()
 	tween.tween_property(self, "modulate:a", 0.3, 0.2)
@@ -702,42 +656,66 @@ func _start_lifetime_flash() -> void:
 
 
 func _add_to_inventory(picker: Node) -> void:
-	"""
-	添加到背包
-	@param picker: 拾取者
-	"""
-	# 隐藏道具
+	"""添加到背包"""
+	# 隐藏道具世界模型
 	hide()
-	
+
 	# 禁用碰撞
 	if _collision:
 		_collision.disabled = true
-	
-	# 通知背包系统
-	# 实际的背包管理逻辑在 InventoryManager 中
-	pass
+
+	# 通知背包系统添加道具
+	if picker.has_node("InventoryManager"):
+		var inventory: Node = picker.get_node("InventoryManager")
+		if inventory.has_method("add_item"):
+			inventory.add_item(self)
 
 
 func _remove_from_inventory() -> void:
-	"""
-	从背包移除
-	"""
-	# 通知背包系统
-	# 实际的背包管理逻辑在 InventoryManager 中
-	pass
+	"""从背包移除"""
+	# 通知背包系统移除道具
+	if owner_node != null and is_instance_valid(owner_node):
+		if owner_node.has_node("InventoryManager"):
+			var inventory: Node = owner_node.get_node("InventoryManager")
+			if inventory.has_method("remove_item"):
+				inventory.remove_item(self)
+
+
+func _notify_codex(_picker: Node) -> void:
+	"""通知图鉴系统记录道具发现"""
+	# 通过场景树查找图鉴单例
+	var codex_nodes: Array[Node] = get_tree().get_nodes_in_group("item_codex")
+	for codex_node in codex_nodes:
+		if codex_node.has_method("discover_item"):
+			codex_node.discover_item(item_id)
+			break
+
+
+func _notify_set_system(_target: Node, is_equipping: bool) -> void:
+	"""通知套装系统道具装备状态变化"""
+	var set_nodes: Array[Node] = get_tree().get_nodes_in_group("item_set_system")
+	for set_node in set_nodes:
+		if is_equipping:
+			if set_node.has_method("on_item_acquired"):
+				set_node.on_item_acquired(item_id)
+		else:
+			if set_node.has_method("on_item_removed"):
+				set_node.on_item_removed(item_id)
+		break
 
 
 func _expire() -> void:
-	"""
-	道具过期消失
-	"""
+	"""道具过期消失"""
 	_schedule_despawn()
 
 
 func _schedule_despawn() -> void:
-	"""
-	安排销毁/归还对象池
-	"""
+	"""安排销毁/归还对象池"""
+	# 取消可能正在运行的临时效果计时器
+	if _temp_effect_timer != null:
+		_temp_effect_timer.time_left = 0
+		_temp_effect_timer = null
+
 	# 如果使用对象池，归还到池中
 	if ObjectPool.has_pool("items"):
 		ObjectPool.despawn(self, 0.1)
@@ -750,19 +728,23 @@ func _schedule_despawn() -> void:
 # 虚方法 - 子类重写
 # =============================================================================
 
+## 拾取时的处理（子类重写）
 func _on_pickup(picker: Node) -> void:
-	"""
-	拾取时的处理（子类重写）
-	@param picker: 拾取者
-	"""
 	pass
 
 
+## 使用时的处理（子类重写）
 func _on_use(user: Node) -> void:
-	"""
-	使用时的处理（子类重写）
-	@param user: 使用者
-	"""
+	pass
+
+
+## 装备时的处理（子类重写）
+func _on_equip(target: Node) -> void:
+	pass
+
+
+## 卸下时的处理（子类重写）
+func _on_unequip(target: Node) -> void:
 	pass
 
 
@@ -771,34 +753,29 @@ func _on_use(user: Node) -> void:
 # =============================================================================
 
 func on_spawn() -> void:
-	"""
-	从对象池取出时的初始化
-	"""
+	"""从对象池取出时的初始化"""
 	_is_picked_up = false
 	is_in_world = true
 	remaining_lifetime = lifetime
 	_is_flashing = false
 	modulate = Color.WHITE
 	show()
-	
+
 	if _collision:
 		_collision.disabled = false
 
 
 func on_despawn() -> void:
-	"""
-	归还到对象池时的清理
-	"""
+	"""归还到对象池时的清理"""
 	_is_picked_up = false
 	owner_node = null
 	is_being_attracted = false
 	attract_target = null
 	current_stack = 1
+	_temp_effect_timer = null
 
 
 func reset() -> void:
-	"""
-	重置道具状态
-	"""
+	"""重置道具状态"""
 	on_despawn()
 	on_spawn()

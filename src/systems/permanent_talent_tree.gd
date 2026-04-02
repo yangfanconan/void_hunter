@@ -1,6 +1,6 @@
 ## Void Hunter - 天赋树系统
 ## @description: 局外永久天赋树，死亡不丢失，跨局成长
-## @version: 2.0.0
+## @version: 2.1.0
 
 extends Node
 
@@ -71,6 +71,12 @@ class Talent:
 	func get_current_effect() -> float:
 		return get_effect_at_level(current_level)
 
+	## 获取下一级的效果预览
+	func get_next_level_effect() -> float:
+		if is_maxed():
+			return get_current_effect()
+		return get_effect_at_level(current_level + 1)
+
 # =============================================================================
 # 公共变量
 # =============================================================================
@@ -79,6 +85,7 @@ var talent_points: int = 0
 var total_points_earned: int = 0
 var talents: Dictionary = {}  ## id -> Talent
 var _save_path: String = "user://talent_tree_save.dat"
+var _save_version: int = 2    ## 存档版本号，用于兼容性检查
 
 # =============================================================================
 # 初始化
@@ -171,15 +178,25 @@ func _register_talent(t_id: String, t_name: String, t_desc: String, t_branch: Br
 func get_talent(talent_id: String) -> Talent:
 	return talents.get(talent_id, null)
 
+## 检查天赋是否可以升级
+func can_upgrade_talent(talent_id: String) -> bool:
+	var talent: Talent = talents.get(talent_id, null)
+	if talent == null:
+		return false
+	var unlocked := _get_unlocked_talents()
+	return talent.can_unlock(talent_points, unlocked)
+
 ## 升级天赋
 func upgrade_talent(talent_id: String) -> bool:
 	var talent: Talent = talents.get(talent_id, null)
 	if talent == null:
+		push_warning("[TalentTree] 天赋不存在: %s" % talent_id)
 		return false
 
 	# 获取已解锁天赋列表（用于前置检查）
 	var unlocked := _get_unlocked_talents()
 	if not talent.can_unlock(talent_points, unlocked):
+		push_warning("[TalentTree] 无法升级天赋: %s (点数不足或前置未满足)" % talent_id)
 		return false
 
 	# 消耗天赋点
@@ -190,6 +207,7 @@ func upgrade_talent(talent_id: String) -> bool:
 	talent_points_changed.emit(talent_points)
 	_save_talent_data()
 
+	print("[TalentTree] 天赋升级: %s -> Lv.%d" % [talent.name, talent.current_level])
 	return true
 
 ## 重置所有天赋
@@ -204,12 +222,29 @@ func reset_all_talents() -> void:
 	talent_reset.emit()
 	talent_points_changed.emit(talent_points)
 	_save_talent_data()
+	print("[TalentTree] 天赋已全部重置，返还 %d 天赋点" % refunded_points)
+
+## 重置指定分支的天赋
+func reset_branch(branch: Branch) -> void:
+	var refunded_points: int = 0
+	for talent_id in talents.keys():
+		var talent: Talent = talents[talent_id]
+		if talent.branch == branch:
+			refunded_points += talent.current_level * talent.cost_per_level
+			talent.current_level = 0
+
+	talent_points += refunded_points
+	talent_reset.emit()
+	talent_points_changed.emit(talent_points)
+	_save_talent_data()
+	print("[TalentTree] 分支 %s 天赋已重置，返还 %d 天赋点" % [Branch.keys()[branch], refunded_points])
 
 ## 增加天赋点
 func add_talent_points(amount: int) -> void:
 	talent_points += amount
 	total_points_earned += amount
 	talent_points_changed.emit(talent_points)
+	print("[TalentTree] 获得 %d 天赋点 (当前: %d)" % [amount, talent_points])
 
 ## 获取某个分支的所有天赋
 func get_talents_by_branch(branch: Branch) -> Array[Talent]:
@@ -218,7 +253,65 @@ func get_talents_by_branch(branch: Branch) -> Array[Talent]:
 		var talent: Talent = talents[talent_id]
 		if talent.branch == branch:
 			result.append(talent)
+	# 按 row, column 排序，方便 UI 显示
+	result.sort_custom(func(a: Talent, b: Talent) -> bool:
+		if a.row != b.row:
+			return a.row < b.row
+		return a.column < b.column
+	)
 	return result
+
+## 获取某个分支的已投入点数
+func get_branch_invested_points(branch: Branch) -> int:
+	var total := 0
+	for talent_id in talents.keys():
+		var talent: Talent = talents[talent_id]
+		if talent.branch == branch:
+			total += talent.current_level * talent.cost_per_level
+	return total
+
+## 获取所有已投入的天赋点总数
+func get_total_invested_points() -> int:
+	var total := 0
+	for talent_id in talents.keys():
+		var talent: Talent = talents[talent_id]
+		total += talent.current_level * talent.cost_per_level
+	return total
+
+## 获取某个分支的进度 (0.0 ~ 1.0)
+func get_branch_progress(branch: Branch) -> float:
+	var total_max := 0
+	var total_current := 0
+	for talent_id in talents.keys():
+		var talent: Talent = talents[talent_id]
+		if talent.branch == branch:
+			total_max += talent.max_level
+			total_current += talent.current_level
+	if total_max == 0:
+		return 0.0
+	return float(total_current) / float(total_max)
+
+## 获取总进度 (0.0 ~ 1.0)
+func get_total_progress() -> float:
+	var total_max := 0
+	var total_current := 0
+	for talent_id in talents.keys():
+		var talent: Talent = talents[talent_id]
+		total_max += talent.max_level
+		total_current += talent.current_level
+	if total_max == 0:
+		return 0.0
+	return float(total_current) / float(total_max)
+
+## 获取指定分支可解锁的最大行数（需前置行有投入点）
+func get_max_unlockable_row(branch: Branch) -> int:
+	var branch_talents := get_talents_by_branch(branch)
+	var max_row_with_points := -1
+	for talent in branch_talents:
+		if talent.current_level > 0 and talent.row > max_row_with_points:
+			max_row_with_points = talent.row
+	# 可解锁的行 = 当前有投入点的最高行 + 1
+	return mini(max_row_with_points + 1, 4)
 
 # =============================================================================
 # 公共方法 - 加成计算
@@ -297,6 +390,37 @@ func calculate_all_bonuses() -> Dictionary:
 
 	return bonuses
 
+## 获取指定分支的加成（只计算该分支）
+func calculate_branch_bonuses(branch: Branch) -> Dictionary:
+	var all_bonuses := calculate_all_bonuses()
+
+	# 定义每个分支对应的加成键
+	var branch_keys := {
+		Branch.OFFENSE: [
+			"attack_percent", "attack_speed_percent", "crit_chance", "crit_damage",
+			"element_damage", "penetration", "aoe_bonus", "multi_hit_chance",
+			"execute_bonus", "berserk_bonus"
+		],
+		Branch.DEFENSE: [
+			"max_health_percent", "defense_percent", "dodge_chance", "shield_amount",
+			"health_regen_percent", "element_resist", "revive_count", "damage_reduction",
+			"damage_reflect", "auto_invincible"
+		],
+		Branch.UTILITY: [
+			"move_speed_percent", "exp_bonus", "gold_bonus", "drop_rate_bonus",
+			"max_mana_percent", "cooldown_reduction", "life_steal", "stamina_regen_percent",
+			"skill_reroll", "legendary_drop_bonus"
+		],
+	}
+
+	var result := {}
+	var keys: Array = branch_keys.get(branch, [])
+	for key in keys:
+		var value = all_bonuses.get(key, 0.0)
+		if value != 0.0 and value != 0:
+			result[key] = value
+	return result
+
 func _add_bonus(bonuses: Dictionary, key: String, talent_id: String) -> void:
 	var talent: Talent = talents.get(talent_id, null)
 	if talent and talent.current_level > 0:
@@ -313,6 +437,7 @@ func _add_bonus_int(bonuses: Dictionary, key: String, talent_id: String) -> void
 
 func _save_talent_data() -> void:
 	var save_data := {
+		"version": _save_version,
 		"talent_points": talent_points,
 		"total_points_earned": total_points_earned,
 		"talents": {}
@@ -326,9 +451,12 @@ func _save_talent_data() -> void:
 	if file:
 		file.store_string(JSON.stringify(save_data, "\t"))
 		file.close()
+	else:
+		push_warning("[TalentTree] 天赋存档保存失败")
 
 func _load_talent_data() -> void:
 	if not FileAccess.file_exists(_save_path):
+		talent_tree_loaded.emit()
 		return
 
 	var file := FileAccess.open(_save_path, FileAccess.READ)
@@ -339,14 +467,37 @@ func _load_talent_data() -> void:
 		var json := JSON.new()
 		if json.parse(json_text) == OK:
 			var data: Dictionary = json.data
-			talent_points = data.get("talent_points", 0)
-			total_points_earned = data.get("total_points_earned", 0)
+
+			# 版本兼容检查
+			var save_ver: int = data.get("version", 1)
+			if save_ver != _save_version:
+				print("[TalentTree] 存档版本 %d -> %d，执行兼容迁移" % [save_ver, _save_version])
+				_migrate_save_data(data, save_ver)
+
+			talent_points = int(data.get("talent_points", 0))
+			total_points_earned = int(data.get("total_points_earned", 0))
 			var saved_talents: Dictionary = data.get("talents", {})
+
 			for talent_id in saved_talents.keys():
 				if talents.has(talent_id):
-					talents[talent_id].current_level = saved_talents[talent_id]
+					var level: int = int(saved_talents[talent_id])
+					var talent: Talent = talents[talent_id]
+					# 防止存档中的等级超过最大等级
+					talent.current_level = mini(level, talent.max_level)
+				else:
+					push_warning("[TalentTree] 存档中包含未知天赋: %s，已忽略" % talent_id)
+		else:
+			push_warning("[TalentTree] 天赋存档解析失败: %s" % json.get_error_message())
 
 	talent_tree_loaded.emit()
+	print("[TalentTree] 天赋数据加载完成，可用点数: %d" % talent_points)
+
+## 存档迁移（用于版本升级时兼容旧存档）
+func _migrate_save_data(data: Dictionary, old_version: int) -> void:
+	# 版本1到版本2: 无需特殊迁移，旧字段仍然兼容
+	if old_version < 2:
+		# 确保所有新天赋都有初始值（默认为0）
+		pass
 
 # =============================================================================
 # 辅助方法
@@ -365,15 +516,30 @@ func get_talent_tree_state() -> Dictionary:
 	var state := {
 		"talent_points": talent_points,
 		"total_points_earned": total_points_earned,
+		"total_invested": get_total_invested_points(),
+		"total_progress": get_total_progress(),
 		"branches": {
-			Branch.OFFENSE: [],
-			Branch.DEFENSE: [],
-			Branch.UTILITY: []
+			Branch.OFFENSE: {
+				"progress": get_branch_progress(Branch.OFFENSE),
+				"invested": get_branch_invested_points(Branch.OFFENSE),
+				"talents": []
+			},
+			Branch.DEFENSE: {
+				"progress": get_branch_progress(Branch.DEFENSE),
+				"invested": get_branch_invested_points(Branch.DEFENSE),
+				"talents": []
+			},
+			Branch.UTILITY: {
+				"progress": get_branch_progress(Branch.UTILITY),
+				"invested": get_branch_invested_points(Branch.UTILITY),
+				"talents": []
+			}
 		}
 	}
 	for talent_id in talents.keys():
 		var talent: Talent = talents[talent_id]
-		state["branches"][talent.branch].append({
+		var unlocked := _get_unlocked_talents()
+		state["branches"][talent.branch]["talents"].append({
 			"id": talent.id,
 			"name": talent.name,
 			"description": talent.description,
@@ -382,6 +548,8 @@ func get_talent_tree_state() -> Dictionary:
 			"row": talent.row,
 			"column": talent.column,
 			"effect": talent.get_current_effect(),
-			"is_maxed": talent.is_maxed()
+			"next_effect": talent.get_next_level_effect(),
+			"is_maxed": talent.is_maxed(),
+			"can_upgrade": talent.can_unlock(talent_points, unlocked),
 		})
 	return state

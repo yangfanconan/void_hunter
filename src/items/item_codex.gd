@@ -62,6 +62,8 @@ var _item_database: Dictionary = {}
 # =============================================================================
 
 func _ready() -> void:
+	"""初始化图鉴系统"""
+	add_to_group("item_codex")
 	_initialize_codex()
 
 

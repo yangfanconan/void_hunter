@@ -451,7 +451,7 @@ func _start_rebind(action: String) -> void:
 	"""
 	_is_rebinding = true
 	_rebind_action = action
-	# TODO: 显示"按下新按键"提示
+	print("[Settings] 按下新按键绑定 [%s]..." % action)  # 显示提示
 
 
 func _cancel_rebind() -> void:
@@ -460,22 +460,35 @@ func _cancel_rebind() -> void:
 	"""
 	_is_rebinding = false
 	_rebind_action = ""
-	# TODO: 隐藏提示
+	print("[Settings] 取消按键重绑定")  # 隐藏提示
 
 
 func _complete_rebind(event: InputEvent) -> void:
-	"""
-	完成按键重绑定
-	@param event: 输入事件
-	"""
-	# TODO: 保存新的按键映射
+	"""完成按键重绑定"""
+	if _rebind_action.is_empty():
+		return
+	
+	# 保存新的按键映射
+	var input_events := InputMap.action_get_events(_rebind_action)
+	input_events.clear()
+	input_events.append(event)
+	InputMap.action_erase_events(_rebind_action)
+	for ie in input_events:
+		InputMap.action_add_event(_rebind_action, ie)
+	
+	# 保存到设置
+	var key_name: String = event.as_text()
+	var controls: Dictionary = _settings.get("controls", {})
+	controls[_rebind_action] = key_name
+	_settings["controls"] = controls
+	
+	if SaveManager:
+		SaveManager.save_settings(_settings)
+	
+	print("[Settings] 按键 %s 绑定为: %s" % [_rebind_action, key_name])
+	
 	_is_rebinding = false
 	_rebind_action = ""
-
-# =============================================================================
-# 信号回调 - 音频
-# =============================================================================
-
 func _on_master_volume_changed(value: float) -> void:
 	"""
 	主音量改变
