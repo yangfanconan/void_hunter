@@ -135,14 +135,18 @@ func _on_area_entered(area: Node) -> void:
 func _apply_effect(target: Node) -> void:
 	if target.has_method("take_damage"):
 		target.take_damage(damage, owner_node)
-	
+
+	# VFX: burn hit effect
+	if VFXManager:
+		VFXManager.spawn_status_vfx(global_position, "burn")
+
 	# 应用燃烧效果
 	if target.has_method("apply_burn"):
 		target.apply_burn(burn_dps, burn_duration, owner_node)
 	elif "burn_damage" in target:
 		target.burn_damage = burn_dps
 		target.burn_timer = burn_duration
-	
+
 	queue_free()
 """
 	script.reload()

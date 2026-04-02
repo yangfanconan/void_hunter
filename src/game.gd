@@ -33,6 +33,9 @@ var player: Node = null
 ## 波次管理器
 var wave_manager: Node = null
 
+## V2系统集成器
+var system_integrator: Node = null
+
 ## 游戏时间
 var game_time: float = 0.0
 
@@ -191,17 +194,27 @@ func _setup_signals() -> void:
 
 func _setup_level_background() -> void:
 	"""设置关卡背景（简单的地板）"""
-	# 创建地板背景
-	var floor_bg = ColorRect.new()
-	floor_bg.name = "FloorBackground"
-	floor_bg.color = Color(0.15, 0.15, 0.2, 1.0)  # 深灰色背景
-	floor_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	floor_bg.custom_minimum_size = Vector2(2000, 2000)
-	floor_bg.position = Vector2(-500, -500)
-	floor_bg.z_index = -10
-	
-	# 添加到关卡容器
-	_level_container.add_child(floor_bg)
+	# 尝试使用AI生成的主题背景
+	var theme_tex: ImageTexture = SpriteManager.get_theme_background(0)
+	if theme_tex:
+		var bg_sprite := TextureRect.new()
+		bg_sprite.name = "FloorBackground"
+		bg_sprite.texture = theme_tex
+		bg_sprite.stretch_mode = TextureRect.STRETCH_SCALE
+		bg_sprite.custom_minimum_size = Vector2(2000, 2000)
+		bg_sprite.position = Vector2(-500, -500)
+		bg_sprite.z_index = -10
+		_level_container.add_child(bg_sprite)
+	else:
+		# 后备：使用简单色块
+		var floor_bg = ColorRect.new()
+		floor_bg.name = "FloorBackground"
+		floor_bg.color = Color(0.15, 0.15, 0.2, 1.0)
+		floor_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		floor_bg.custom_minimum_size = Vector2(2000, 2000)
+		floor_bg.position = Vector2(-500, -500)
+		floor_bg.z_index = -10
+		_level_container.add_child(floor_bg)
 	
 	# 创建网格线效果
 	_create_grid_lines()
@@ -266,6 +279,9 @@ func _start_game() -> void:
 	# 创建玩家
 	_spawn_player()
 	
+	# 初始化V2系统集成器
+	_setup_system_integrator()
+
 	# 创建波次管理器
 	_setup_wave_manager()
 	
@@ -325,14 +341,18 @@ func _create_player_instance() -> CharacterBody2D:
 	collision.shape = shape
 	player_node.add_child(collision)
 	
-	# 添加视觉表现
+	# 添加视觉表现 - 使用精灵管理器加载AI生成的美术素材
 	var sprite := Sprite2D.new()
-	var texture := ImageTexture.new()
-	var image := Image.create(24, 24, false, Image.FORMAT_RGBA8)
-	# 绘制简单的玩家图形（绿色圆形）
-	image.fill(Color(0.2, 0.8, 0.3))
-	texture.set_image(image)
-	sprite.texture = texture
+	var player_tex: ImageTexture = SpriteManager.get_player_frame(0)
+	if player_tex:
+		sprite.texture = player_tex
+	else:
+		# 后备：使用简单色块
+		var texture := ImageTexture.new()
+		var image := Image.create(24, 24, false, Image.FORMAT_RGBA8)
+		image.fill(Color(0.2, 0.8, 0.3))
+		texture.set_image(image)
+		sprite.texture = texture
 	player_node.add_child(sprite)
 	
 	# 添加瞄准指示器
@@ -402,12 +422,27 @@ func _setup_hud() -> void:
 		_hud.set_player(player)
 	
 	# 初始化 HUD 显示
-	if player and player.has("stats"):
+	if player and "stats" in player:
 		var stats = player.stats
-		_hud.update_health(stats.current_health, stats.max_health)
-		_hud.update_mana(stats.current_mana, stats.max_mana)
-		_hud.update_exp(stats.current_experience, stats.experience_required)
+		if _hud:
+			_hud.update_health(stats.current_health, stats.max_health)
+			_hud.update_mana(stats.current_mana, stats.max_mana)
+			_hud.update_exp(stats.current_experience, stats.experience_required)
 
+
+
+func _setup_system_integrator() -> void:
+	"""初始化V2系统集成器"""
+	var integrator_script := load("res://src/systems/game_system_integrator.gd")
+	if integrator_script:
+		system_integrator = Node.new()
+		system_integrator.set_script(integrator_script)
+		system_integrator.name = "GameSystemIntegrator"
+		_game_world.add_child(system_integrator)
+		
+		# 设置玩家引用
+		system_integrator.setup_player(player)
+		print("[Game] V2系统集成器已初始化")
 
 func _cleanup_game() -> void:
 	"""清理游戏状态"""
@@ -420,6 +455,11 @@ func _cleanup_game() -> void:
 	if wave_manager and is_instance_valid(wave_manager):
 		wave_manager.queue_free()
 		wave_manager = null
+	
+	# 清理V2系统集成器
+	if system_integrator and is_instance_valid(system_integrator):
+		system_integrator.queue_free()
+		system_integrator = null
 	
 	# 清理所有敌人和子弹
 	if _entities:
@@ -571,6 +611,10 @@ func _on_player_stats_changed(stats: Resource) -> void:
 func _on_player_leveled_up(new_level: int) -> void:
 	"""玩家升级回调"""
 	print("[Game] 玩家升级到: ", new_level)
+	
+	# V2: 通知天赋树
+	if system_integrator:
+		system_integrator.on_player_level_up(new_level)
 
 # =============================================================================
 # 信号回调 - 波次
@@ -580,6 +624,10 @@ func _on_wave_started(wave_number: int) -> void:
 	"""波次开始回调"""
 	print("[Game] 第 %d 波开始" % wave_number)
 	GameManager.set_wave(wave_number)
+	
+	# V2: 设置波次主题
+	if system_integrator:
+		system_integrator.setup_wave_theme(wave_number)
 
 
 func _on_wave_completed(wave_number: int) -> void:
@@ -599,6 +647,10 @@ func _on_enemy_died(killer: Node, enemy: Node) -> void:
 	"""敌人死亡回调"""
 	record_enemy_kill()
 	GameManager.record_enemy_kill()
+	
+	# V2: 通知连击系统
+	if system_integrator:
+		system_integrator.on_enemy_killed(enemy)
 	
 	# 通知波次管理器
 	if wave_manager and wave_manager.has_method("on_enemy_died"):

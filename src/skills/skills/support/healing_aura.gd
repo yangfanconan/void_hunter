@@ -157,6 +157,10 @@ func _apply_heal() -> void:
 				if stats:
 					stats.heal(heal_per_ally)
 	
+	# VFX: 治疗触发闪烁效果
+	if VFXManager:
+		VFXManager.spawn_heal_sparkle(owner_node.global_position)
+
 	heal_triggered.emit(heal_amount)
 
 

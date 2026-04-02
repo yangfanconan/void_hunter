@@ -60,7 +60,7 @@ func _init() -> void:
 	target_type = TargetType.POSITION
 	element = SkillElement.ARCANE
 	hotkey_slot = 4
-	
+
 	base_damage = center_damage_per_second
 	base_cooldown = 14.0
 	base_mana_cost = 35.0
@@ -75,13 +75,13 @@ func initialize(owner: Node) -> void:
 
 func update(delta: float) -> void:
 	super.update(delta)
-	
+
 	if _is_active:
 		_duration_timer -= delta
-		
+
 		# 应用拉扯力和伤害
 		_apply_gravity_effects(delta)
-		
+
 		if _duration_timer <= 0:
 			_deactivate_gravity_field()
 
@@ -96,13 +96,13 @@ func _execute_position_effect(target_position: Variant) -> void:
 	"""
 	if target_position == null:
 		return
-	
+
 	var pos: Vector2 = target_position if target_position is Vector2 else Vector2.ZERO
-	
+
 	# 如果已有引力场，先移除
 	if _is_active:
 		_deactivate_gravity_field()
-	
+
 	_create_gravity_field(pos)
 
 
@@ -113,15 +113,19 @@ func _create_gravity_field(pos: Vector2) -> void:
 	_is_active = true
 	_field_position = pos
 	_duration_timer = get_duration()
-	
+
+	# VFX: 引力场激活爆炸效果
+	if VFXManager:
+		VFXManager.spawn_effect("explosion_small", pos, {"color": Color(0.5, 0, 0.8)})
+
 	# 创建引力场区域
 	_create_field_area()
-	
+
 	# 创建视觉效果
 	_create_visual_effect()
-	
+
 	gravity_field_created.emit(pos, get_field_radius())
-	
+
 	AudioManager.play_sfx("gravity_field")
 
 
@@ -130,20 +134,20 @@ func _deactivate_gravity_field() -> void:
 	停用引力场
 	"""
 	_is_active = false
-	
+
 	# 移除区域
 	if _field_area and is_instance_valid(_field_area):
 		_field_area.queue_free()
 		_field_area = null
-	
+
 	# 移除视觉效果
 	if _visual_effect and is_instance_valid(_visual_effect):
 		_visual_effect.queue_free()
 		_visual_effect = null
-	
+
 	# 清空受影响列表
 	_affected_enemies.clear()
-	
+
 	gravity_field_expired.emit()
 
 
@@ -153,21 +157,21 @@ func _create_field_area() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_field_area = Area2D.new()
 	_field_area.collision_layer = 0
 	_field_area.collision_mask = 2  # Enemy layer
-	
+
 	var collision: CollisionShape2D = CollisionShape2D.new()
 	var shape: CircleShape2D = CircleShape2D.new()
 	shape.radius = get_field_radius()
 	collision.shape = shape
 	_field_area.add_child(collision)
-	
+
 	# 连接信号
 	_field_area.body_entered.connect(_on_enemy_entered_field)
 	_field_area.body_exited.connect(_on_enemy_exited_field)
-	
+
 	# 添加到场景
 	owner_node.get_tree().current_scene.add_child(_field_area)
 	_field_area.global_position = _field_position
@@ -202,39 +206,39 @@ func _apply_gravity_effects(delta: float) -> void:
 	for i in range(_affected_enemies.size() - 1, -1, -1):
 		var ref: WeakRef = _affected_enemies[i]
 		var enemy: Node = ref.get_ref()
-		
+
 		if enemy == null or not is_instance_valid(enemy):
 			_affected_enemies.remove_at(i)
 			continue
-		
+
 		# 计算到中心的距离和方向
 		var to_center: Vector2 = _field_position - enemy.global_position
 		var distance: float = to_center.length()
-		
+
 		if distance <= 5.0:
 			continue
-		
+
 		var direction: Vector2 = to_center.normalized()
-		
+
 		# 应用拉扯力（距离越近力越小）
 		var pull_multiplier: float = clampf(distance / get_field_radius(), 0.3, 1.0)
 		var actual_pull: float = get_pull_force() * pull_multiplier * delta
-		
+
 		# 移动敌人
 		if "velocity" in enemy:
 			enemy.velocity += direction * actual_pull
 		elif "global_position" in enemy:
 			enemy.global_position += direction * actual_pull
-		
+
 		# 应用减速
 		if "speed_modifier" in enemy:
 			enemy.speed_modifier = 1.0 - slow_in_field
-		
+
 		# 中心区域伤害
 		if distance <= get_center_damage_radius():
 			if enemy.has_method("take_damage"):
 				enemy.take_damage(get_damage() * delta, owner_node)
-		
+
 		enemy_pulled.emit(enemy, actual_pull)
 
 
@@ -248,15 +252,15 @@ func _create_visual_effect() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_visual_effect = Node2D.new()
 	_visual_effect.name = "GravityFieldVisual"
 	_visual_effect.global_position = _field_position
 	_visual_effect.modulate = Color(0.5, 0.2, 0.8, 0.5)
 	_visual_effect.z_index = -1
-	
+
 	owner_node.get_tree().current_scene.add_child(_visual_effect)
-	
+
 	# 脉冲动画
 	var tween: Tween = owner_node.create_tween()
 	tween.set_loops()

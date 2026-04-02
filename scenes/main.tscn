@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=5 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="2_hud"]
 [ext_resource type="Script" path="res://src/ui/main_menu.gd" id="3_main_menu"]
+[ext_resource type="Script" path="res://src/ui/mobile_controls.gd" id="4_mobile"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_game")
@@ -250,3 +251,7 @@ text = "返回主菜单"
 [connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonResume" to="." method="_on_pause_resume"]
 [connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonSettings" to="." method="_on_pause_settings"]
 [connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonMainMenu" to="." method="_on_pause_main_menu"]
+
+[node name="MobileControls" type="CanvasLayer" parent="."]
+layer = 5
+script = ExtResource("4_mobile")

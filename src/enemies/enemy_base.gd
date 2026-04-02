@@ -40,11 +40,11 @@ const DEFAULT_ATTACK_DAMAGE: float = 10.0
 ## 默认攻击范围
 const DEFAULT_ATTACK_RANGE: float = 40.0
 
-## 默认检测范围
-const DEFAULT_DETECTION_RANGE: float = 400.0
+## 默认检测范围 - 大幅增加让敌人能从更远发现玩家
+const DEFAULT_DETECTION_RANGE: float = 2000.0
 
-## 默认追击范围
-const DEFAULT_CHASE_RANGE: float = 500.0
+## 默认追击范围 - 大幅增加让敌人持续追击
+const DEFAULT_CHASE_RANGE: float = 3000.0
 
 ## 受伤无敌时间
 const HIT_INVINCIBILITY_TIME: float = 0.2
@@ -78,6 +78,15 @@ enum EnemyType {
 	BOSS		## Boss
 }
 
+## 掉落物类型
+enum DropType {
+	GOLD,			## 金币
+	HEALTH_POTION,	## 生命药水
+	MANA_POTION,	## 法力药水
+	EXP_GEM,		## 经验宝石
+	RARE_ITEM		## 稀有道具
+}
+
 # =============================================================================
 # 导出变量
 # =============================================================================
@@ -98,25 +107,34 @@ enum EnemyType {
 @export_range(10.0, 200.0) var attack_range: float = DEFAULT_ATTACK_RANGE
 
 ## 检测范围
-@export_range(50.0, 1000.0) var detection_range: float = DEFAULT_DETECTION_RANGE
+@export_range(50.0, 5000.0) var detection_range: float = DEFAULT_DETECTION_RANGE
 
 ## 追击范围（超出此范围停止追击）
-@export_range(100.0, 1500.0) var chase_range: float = DEFAULT_CHASE_RANGE
+@export_range(100.0, 5000.0) var chase_range: float = DEFAULT_CHASE_RANGE
 
 ## 攻击冷却时间
 @export_range(0.1, 5.0) var attack_cooldown: float = 1.0
 
 ## 经验值奖励
-@export var experience_reward: int = 10
+@export var experience_reward: int = 20
 
 ## 金币奖励
-@export var gold_reward: int = 5
+@export var gold_reward: int = 10
 
 ## 是否启用漫游
 @export var enable_wander: bool = true
 
 ## 漫游范围
 @export var wander_range: float = 100.0
+
+## 是否掉落道具
+@export var can_drop_items: bool = true
+
+## 金币掉落数量范围
+@export var gold_drop_range: Vector2i = Vector2i(2, 5)
+
+## 道具掉落概率加成
+@export var drop_chance_bonus: float = 0.0
 
 # =============================================================================
 # 公共变量
@@ -153,6 +171,8 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 var _stun_timer: float = 0.0
 var _initial_position: Vector2 = Vector2.ZERO
 var _difficulty_applied: bool = false
+var _anim_sprite: AnimatedSprite2D = null
+var _current_anim: String = "idle"
 
 # =============================================================================
 # 生命周期方法
@@ -211,6 +231,40 @@ func apply_difficulty(multiplier: float) -> void:
 	gold_reward = int(float(gold_reward) * multiplier)
 	
 	_difficulty_applied = true
+
+
+## 应用波次缩放（敌人属性随波次增加）
+## @param wave_number: 当前波次数
+func apply_wave_scaling(wave_number: int) -> void:
+	"""应用波次缩放，使敌人属性随波次增加"""
+	if _difficulty_applied:
+		return
+	
+	# 计算属性缩放系数
+	# 每波生命值增加 10%
+	var health_mult: float = 1.0 + (wave_number - 1) * 0.1
+	# 每波伤害增加 5%
+	var damage_mult: float = 1.0 + (wave_number - 1) * 0.05
+	# 每波移动速度增加 2%
+	var speed_mult: float = 1.0 + (wave_number - 1) * 0.02
+	
+	# 应用属性缩放
+	max_health *= health_mult
+	current_health = max_health
+	attack_damage *= damage_mult
+	move_speed *= speed_mult
+	
+	# 设置难度系数标记
+	difficulty_multiplier = health_mult
+	
+	# 奖励也随波次增加（每波增加 5%）
+	var reward_mult: float = 1.0 + (wave_number - 1) * 0.05
+	experience_reward = int(float(experience_reward) * reward_mult)
+	gold_reward = int(float(gold_reward) * reward_mult)
+	
+	_difficulty_applied = true
+	
+	print("[EnemyBase] 应用波次 %d 缩放: 生命x%.2f, 伤害x%.2f, 速度x%.2f" % [wave_number, health_mult, damage_mult, speed_mult])
 
 # =============================================================================
 # 公共方法 - 伤害系统
@@ -333,6 +387,10 @@ func _initialize_enemy() -> void:
 	current_state = State.IDLE
 	_initial_position = global_position
 	
+	# 设置碰撞层（第2层 = 敌人层）
+	collision_layer = 2
+	collision_mask = 1 | 16  # 检测玩家(第1层)和障碍物(第5层)
+	
 	# 添加到敌人组
 	add_to_group("enemies")
 	
@@ -345,11 +403,121 @@ func _initialize_enemy() -> void:
 	# 确保有碰撞形状
 	_ensure_collision_shape()
 	
+	# 设置AI生成的敌人精灵
+	_setup_sprite()
+	
 	# 查找玩家
 	_find_target()
 	
 	print("[EnemyBase] 初始化完成: %s" % name)
 
+
+func _setup_sprite() -> void:
+	"""设置敌人精灵"""
+	for child in get_children():
+		if child is AnimatedSprite2D:
+			_anim_sprite = child
+			return
+		if child is Sprite2D:
+			return
+	
+	var anim_id := _get_animation_id()
+	
+	# 尝试使用 AnimationManager 加载动画
+	if AnimationManager and anim_id != "":
+		var sf: Variant = AnimationManager.get_entity_sprite_frames(anim_id)
+		if sf:
+			_anim_sprite = AnimatedSprite2D.new()
+			_anim_sprite.name = "EnemyAnim"
+			_anim_sprite.sprite_frames = sf
+			_anim_sprite.play("idle")
+			if not _anim_sprite.animation_finished.is_connected(_on_enemy_anim_finished):
+				_anim_sprite.animation_finished.connect(_on_enemy_anim_finished)
+			add_child(_anim_sprite)
+			return
+	
+	# 后备1：使用精灵管理器加载静态精灵
+	var enemy_tex: ImageTexture = null
+	if anim_id != "":
+		enemy_tex = SpriteManager.get_enemy_sprite_by_id(anim_id)
+	if enemy_tex == null:
+		enemy_tex = SpriteManager.get_random_enemy_sprite()
+	
+	if enemy_tex:
+		var sprite := Sprite2D.new()
+		sprite.texture = enemy_tex
+		add_child(sprite)
+		return
+	
+	# 后备2：Boss特殊处理
+	if enemy_type == EnemyType.BOSS:
+		var boss_tex := SpriteManager.get_boss_sprite()
+		if boss_tex:
+			var sprite := Sprite2D.new()
+			sprite.texture = boss_tex
+			add_child(sprite)
+			return
+	
+	# 后备3：颜色方块
+	var sprite := Sprite2D.new()
+	var texture := ImageTexture.new()
+	var image := Image.create(24, 24, false, Image.FORMAT_RGBA8)
+	match enemy_type:
+		EnemyType.MELEE:
+			image.fill(Color(0.8, 0.2, 0.2))
+		EnemyType.RANGED:
+			image.fill(Color(0.2, 0.6, 0.8))
+		EnemyType.TANK:
+			image.fill(Color(0.6, 0.4, 0.2))
+		EnemyType.ELITE:
+			image.fill(Color(0.8, 0.6, 0.0))
+		EnemyType.BOSS:
+			image.fill(Color(0.6, 0.0, 0.6))
+		_:
+			image.fill(Color(0.5, 0.5, 0.5))
+	texture.set_image(image)
+	sprite.texture = texture
+	add_child(sprite)
+
+## 获取敌人精灵索引
+func _get_sprite_index() -> int:
+	var mapping := {
+		"Slime": 0, "Wolf": 1, "Mushroom": 2, "Scorpion": 3,
+		"Mummy": 4, "Ghost": 5, "FireImp": 6, "ClockworkSoldier": 7,
+		"ShadowCrawler": 8, "Skeleton": 9, "IceSlime": 10, "BoneDragon": 11,
+	}
+	return mapping.get(name, -1)
+
+## 获取动画ID（用于 AnimationManager）
+func _get_animation_id() -> String:
+	if enemy_type == EnemyType.BOSS:
+		return "boss"
+	var mapping := {
+		"ForestSlime": "forest_slime", "Wolf": "wolf", "Mushroom": "mushroom",
+		"Scorpion": "scorpion", "Mummy": "mummy", "Ghost": "ghost",
+		"FireImp": "fire_imp", "ClockworkSoldier": "clockwork_soldier",
+		"ShadowCrawler": "shadow_crawler", "Skeleton": "skeleton",
+		"IceSlime": "ice_slime", "BoneDragon": "bone_dragon",
+	}
+	return mapping.get(name, "")
+
+## 播放动画
+func _play_animation(anim_name: String) -> void:
+	if _anim_sprite == null or not is_instance_valid(_anim_sprite):
+		return
+	if _current_anim == anim_name:
+		return
+	if not _anim_sprite.sprite_frames:
+		return
+	if not _anim_sprite.sprite_frames.has_animation(anim_name):
+		return
+	_current_anim = anim_name
+	_anim_sprite.play(anim_name)
+
+## 动画播放完毕回调
+func _on_enemy_anim_finished() -> void:
+	if _current_anim in ["attack", "hurt"]:
+		_play_animation("idle")
 
 func _ensure_collision_shape() -> void:
 	"""确保有碰撞形状"""
@@ -541,6 +709,19 @@ func _change_state(new_state: State) -> void:
 	var old_state: State = current_state
 	current_state = new_state
 	state_changed.emit(old_state, new_state)
+	
+	# 触发状态动画
+	match new_state:
+		State.IDLE:
+			_play_animation("idle")
+		State.WANDER, State.CHASE:
+			_play_animation("walk")
+		State.ATTACK:
+			_play_animation("attack")
+		State.STUNNED:
+			_play_animation("hurt")
+		State.DEAD:
+			_play_animation("die")
 
 
 func _start_wander() -> void:
@@ -575,16 +756,77 @@ func _apply_knockback(source: Node) -> void:
 
 func _on_hit_effects(_amount: float, _source: Node) -> void:
 	"""受伤效果"""
-	# 闪烁效果通过 _update_visuals 处理
+	_play_animation("hurt")
+	if VFXManager:
+		VFXManager.spawn_hit_spark(global_position)
 
 
 func _on_death_effects(_killer: Node) -> void:
 	"""死亡效果"""
+	_play_animation("die")
+	if VFXManager:
+		VFXManager.spawn_death_explosion(global_position, "death")
 	# 变成灰色并缩小
 	modulate = Color(0.5, 0.5, 0.5, 0.5)
 	
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "scale", Vector2.ZERO, 0.3)
+	
+	# 掉落道具
+	if can_drop_items:
+		_spawn_drops()
+
+
+## 生成掉落物
+func _spawn_drops() -> void:
+	"""敌人死亡时生成掉落物"""
+	# 加载掉落物脚本
+	var drop_script: GDScript = preload("res://src/items/drop_item.gd")
+	
+	# 根据敌人类型获取掉落表
+	var enemy_type_name := _get_enemy_type_name()
+	var drop_table: Array = drop_script.get_default_enemy_drop_table(enemy_type_name)
+	
+	# 应用掉落概率加成并创建新表
+	if drop_chance_bonus > 0:
+		var new_table: Array = []
+		for entry in drop_table:
+			var new_entry: Dictionary = entry.duplicate()
+			new_entry["chance"] = min(1.0, new_entry.get("chance", 1.0) + drop_chance_bonus)
+			new_table.append(new_entry)
+		drop_table = new_table
+	
+	# 生成掉落物
+	var drops: Array = drop_script.generate_drops_from_table(drop_table, global_position)
+	
+	# 添加到场景
+	var main := get_tree().current_scene
+	var container: Node = null
+	
+	if main:
+		container = main.get_node_or_null("GameWorld/Entities")
+		if container == null:
+			container = main.get_node_or_null("GameWorld")
+	
+	for drop in drops:
+		if container:
+			container.add_child(drop)
+		elif main:
+			main.add_child(drop)
+		else:
+			get_tree().current_scene.add_child(drop)
+
+
+## 获取敌人类型名称
+func _get_enemy_type_name() -> String:
+	"""获取敌人类型名称用于掉落表"""
+	match enemy_type:
+		EnemyType.MELEE: return "melee"
+		EnemyType.RANGED: return "ranged"
+		EnemyType.TANK: return "tank"
+		EnemyType.ELITE: return "elite"
+		EnemyType.BOSS: return "boss"
+		_: return "normal"
 
 
 func _grant_rewards(killer: Node) -> void:

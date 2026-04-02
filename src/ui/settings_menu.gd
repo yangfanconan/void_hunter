@@ -352,7 +352,7 @@ func _apply_pending_settings() -> void:
 	settings_applied.emit(_settings)
 	
 	# 播放音效
-	AudioManager.play_ui_sound("button_click")
+	AudioManager.play_sfx("button_click")
 
 
 func _apply_audio_settings() -> void:
@@ -513,7 +513,7 @@ func _on_sfx_volume_changed(value: float) -> void:
 	
 	# 即时预览并播放示例音效
 	AudioManager.set_bus_volume(AudioManager.BUS_SFX, volume)
-	AudioManager.play_ui_sound("button_click")
+	AudioManager.play_sfx("button_click")
 
 # =============================================================================
 # 信号回调 - 画面
@@ -580,7 +580,7 @@ func _on_reset_pressed() -> void:
 	"""
 	重置按钮按下
 	"""
-	AudioManager.play_ui_sound("button_click")
+	AudioManager.play_sfx("button_click")
 	reset_to_defaults()
 
 
@@ -588,5 +588,5 @@ func _on_back_pressed() -> void:
 	"""
 	返回按钮按下
 	"""
-	AudioManager.play_ui_sound("button_click")
+	AudioManager.play_sfx("button_click")
 	hide_settings()

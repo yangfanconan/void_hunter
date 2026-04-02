@@ -54,7 +54,7 @@ func _init() -> void:
 	target_type = TargetType.SELF
 	element = SkillElement.PHYSICAL
 	hotkey_slot = 3
-	
+
 	base_cooldown = 15.0
 	base_mana_cost = 35.0
 	duration = iron_wall_duration
@@ -67,10 +67,10 @@ func initialize(owner: Node) -> void:
 
 func update(delta: float) -> void:
 	super.update(delta)
-	
+
 	if _is_active:
 		_duration_timer -= delta
-		
+
 		if _duration_timer <= 0:
 			_deactivate_iron_wall()
 
@@ -87,7 +87,7 @@ func _execute_self_effect() -> void:
 		# 如果已经激活，刷新持续时间
 		_duration_timer = get_duration()
 		return
-	
+
 	_activate_iron_wall()
 
 
@@ -97,15 +97,19 @@ func _activate_iron_wall() -> void:
 	"""
 	_is_active = true
 	_duration_timer = get_duration()
-	
+
+	# VFX: 铁壁激活脉冲效果
+	if VFXManager:
+		VFXManager.spawn_effect("shield_pulse", owner_node.global_position, {"color": Color(0.8, 0.8, 0.8)})
+
 	# 应用属性加成
 	_apply_stat_bonuses()
-	
+
 	# 创建视觉效果
 	_create_iron_wall_visual()
-	
+
 	iron_wall_activated.emit()
-	
+
 	# 播放音效
 	AudioManager.play_sfx("iron_wall")
 
@@ -115,10 +119,10 @@ func _deactivate_iron_wall() -> void:
 	停用铁壁效果
 	"""
 	_is_active = false
-	
+
 	# 移除属性加成
 	_remove_stat_bonuses()
-	
+
 	iron_wall_deactivated.emit()
 
 
@@ -128,14 +132,14 @@ func _apply_stat_bonuses() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	if "stats" in owner_node:
 		var stats: PlayerStats = owner_node.stats
 		if stats:
 			# 保存原始值
 			_original_defense_bonus = stats.defense_bonus_percent
 			_original_damage_reduction = stats.damage_reduction
-			
+
 			# 应用加成
 			stats.defense_bonus_percent += get_defense_bonus()
 			stats.damage_reduction += get_damage_reduction()
@@ -147,7 +151,7 @@ func _remove_stat_bonuses() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	if "stats" in owner_node:
 		var stats: PlayerStats = owner_node.stats
 		if stats:
@@ -166,14 +170,14 @@ func _create_iron_wall_visual() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	# 修改玩家颜色
 	var tween: Tween = owner_node.create_tween()
 	tween.tween_property(owner_node, "modulate", Color(0.7, 0.7, 0.8, 1.0), 0.2)
-	
+
 	# 持续时间结束后恢复
 	await owner_node.get_tree().create_timer(get_duration()).timeout
-	
+
 	if is_instance_valid(owner_node):
 		var restore_tween: Tween = owner_node.create_tween()
 		restore_tween.tween_property(owner_node, "modulate", Color.WHITE, 0.2)

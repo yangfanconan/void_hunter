@@ -55,7 +55,7 @@ func _init() -> void:
 	target_type = TargetType.SELF
 	element = SkillElement.ARCANE
 	hotkey_slot = 4
-	
+
 	base_cooldown = 12.0
 	base_mana_cost = 25.0
 	duration = reflect_duration
@@ -69,13 +69,13 @@ func initialize(owner: Node) -> void:
 
 func update(delta: float) -> void:
 	super.update(delta)
-	
+
 	if _is_active:
 		_duration_timer -= delta
-		
+
 		if _duration_timer <= 0:
 			_deactivate_reflect()
-		
+
 		# 更新反射区域位置
 		if _reflect_area and is_instance_valid(_reflect_area):
 			_reflect_area.global_position = owner_node.global_position
@@ -93,7 +93,7 @@ func _execute_self_effect() -> void:
 		# 刷新持续时间
 		_duration_timer = get_duration()
 		return
-	
+
 	_activate_reflect()
 
 
@@ -104,15 +104,19 @@ func _activate_reflect() -> void:
 	_is_active = true
 	_duration_timer = get_duration()
 	_reflect_count = 0
-	
+
+	# VFX: 反射护盾激活脉冲效果
+	if VFXManager:
+		VFXManager.spawn_effect("shield_pulse", owner_node.global_position, {"color": Color(1, 0.8, 0.2)})
+
 	# 创建反射区域
 	_create_reflect_area()
-	
+
 	# 创建视觉效果
 	_create_reflect_visual()
-	
+
 	reflect_activated.emit()
-	
+
 	AudioManager.play_sfx("reflect_on")
 
 
@@ -121,12 +125,12 @@ func _deactivate_reflect() -> void:
 	停用反射护盾
 	"""
 	_is_active = false
-	
+
 	# 移除反射区域
 	if _reflect_area and is_instance_valid(_reflect_area):
 		_reflect_area.queue_free()
 		_reflect_area = null
-	
+
 	reflect_deactivated.emit()
 
 
@@ -136,20 +140,20 @@ func _create_reflect_area() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_reflect_area = Area2D.new()
 	_reflect_area.collision_layer = 0
 	_reflect_area.collision_mask = 4  # Enemy projectile layer
-	
+
 	var collision: CollisionShape2D = CollisionShape2D.new()
 	var shape: CircleShape2D = CircleShape2D.new()
 	shape.radius = get_reflect_range()
 	collision.shape = shape
 	_reflect_area.add_child(collision)
-	
+
 	# 连接信号
 	_reflect_area.area_entered.connect(_on_projectile_entered)
-	
+
 	# 添加到场景
 	owner_node.get_tree().current_scene.add_child(_reflect_area)
 	_reflect_area.global_position = owner_node.global_position
@@ -165,15 +169,15 @@ func _on_projectile_entered(projectile: Node) -> void:
 	"""
 	if not _is_active:
 		return
-	
+
 	# 检查反射次数限制
 	if max_reflects > 0 and _reflect_count >= max_reflects:
 		return
-	
+
 	# 检查是否是敌方投射物
 	if not _is_enemy_projectile(projectile):
 		return
-	
+
 	# 反弹投射物
 	_reflect_projectile(projectile)
 	_reflect_count += 1
@@ -197,7 +201,7 @@ func _reflect_projectile(projectile: Node) -> void:
 	var original_damage: float = 0.0
 	var original_speed: float = 300.0
 	var direction: Vector2 = Vector2.RIGHT
-	
+
 	if "damage" in projectile:
 		original_damage = projectile.damage
 	if "speed" in projectile:
@@ -206,10 +210,10 @@ func _reflect_projectile(projectile: Node) -> void:
 		direction = -projectile.direction  # 反转方向
 	elif "velocity" in projectile:
 		direction = -projectile.velocity.normalized()
-	
+
 	# 计算反射伤害
 	var reflected_damage: float = original_damage * get_reflect_damage_multiplier()
-	
+
 	# 修改投射物属性
 	if "damage" in projectile:
 		projectile.damage = reflected_damage
@@ -219,23 +223,23 @@ func _reflect_projectile(projectile: Node) -> void:
 		projectile.direction = direction
 	if "velocity" in projectile:
 		projectile.velocity = direction * original_speed * reflected_speed_multiplier
-	
+
 	# 修改归属
 	if "owner" in projectile:
 		projectile.owner = owner_node
-	
+
 	# 修改碰撞层（从敌人投射物变为玩家投射物）
 	if "collision_layer" in projectile:
 		projectile.collision_layer = 16  # Player projectile layer
 	if "collision_mask" in projectile:
 		projectile.collision_mask = 2  # Target enemies
-	
+
 	# 视觉效果
 	_create_reflect_effect(projectile.global_position)
-	
+
 	# 发送信号
 	projectile_reflected.emit(projectile, reflected_damage)
-	
+
 	AudioManager.play_sfx("reflect")
 
 
@@ -249,20 +253,20 @@ func _create_reflect_visual() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	var visual: Node2D = Node2D.new()
 	visual.name = "ReflectVisual"
 	owner_node.add_child(visual)
-	
+
 	# 循环动画
 	var tween: Tween = owner_node.create_tween()
 	tween.set_loops()
 	tween.tween_property(visual, "modulate:a", 0.5, 0.3)
 	tween.tween_property(visual, "modulate:a", 1.0, 0.3)
-	
+
 	# 持续时间结束后移除
 	await owner_node.get_tree().create_timer(get_duration()).timeout
-	
+
 	if is_instance_valid(visual):
 		visual.queue_free()
 
@@ -273,13 +277,13 @@ func _create_reflect_effect(pos: Vector2) -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	var effect: Node2D = Node2D.new()
 	effect.global_position = pos
 	effect.modulate = Color(0.3, 0.6, 1.0, 1.0)
-	
+
 	owner_node.get_tree().current_scene.add_child(effect)
-	
+
 	var tween: Tween = owner_node.create_tween()
 	tween.tween_property(effect, "modulate:a", 0.0, 0.2)
 	tween.tween_callback(effect.queue_free)

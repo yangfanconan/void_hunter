@@ -56,7 +56,7 @@ func _init() -> void:
 	target_type = TargetType.SELF
 	element = SkillElement.ARCANE
 	hotkey_slot = 4
-	
+
 	base_damage = 0.0
 	base_cooldown = 18.0
 	base_mana_cost = 40.0
@@ -72,18 +72,18 @@ func initialize(owner: Node) -> void:
 
 func update(delta: float) -> void:
 	super.update(delta)
-	
+
 	if _is_active:
 		_duration_timer -= delta
-		
+
 		# 更新减速区域位置
 		if _slow_area and is_instance_valid(_slow_area):
 			_slow_area.global_position = owner_node.global_position
-		
+
 		# 更新视觉效果位置
 		if _visual_effect and is_instance_valid(_visual_effect):
 			_visual_effect.global_position = owner_node.global_position
-		
+
 		if _duration_timer <= 0:
 			_deactivate_time_slow()
 
@@ -100,7 +100,7 @@ func _execute_self_effect() -> void:
 		# 刷新持续时间
 		_duration_timer = get_duration()
 		return
-	
+
 	_activate_time_slow()
 
 
@@ -110,15 +110,15 @@ func _activate_time_slow() -> void:
 	"""
 	_is_active = true
 	_duration_timer = get_duration()
-	
+
 	# 创建减速区域
 	_create_slow_area()
-	
+
 	# 创建视觉效果
 	_create_visual_effect()
-	
+
 	time_slow_activated.emit()
-	
+
 	AudioManager.play_sfx("time_slow")
 
 
@@ -127,20 +127,20 @@ func _deactivate_time_slow() -> void:
 	停用时间减缓
 	"""
 	_is_active = false
-	
+
 	# 移除所有敌人的减速效果
 	_remove_all_slow_effects()
-	
+
 	# 移除减速区域
 	if _slow_area and is_instance_valid(_slow_area):
 		_slow_area.queue_free()
 		_slow_area = null
-	
+
 	# 移除视觉效果
 	if _visual_effect and is_instance_valid(_visual_effect):
 		_visual_effect.queue_free()
 		_visual_effect = null
-	
+
 	time_slow_deactivated.emit()
 
 
@@ -150,21 +150,21 @@ func _create_slow_area() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_slow_area = Area2D.new()
 	_slow_area.collision_layer = 0
 	_slow_area.collision_mask = 2  # Enemy layer
-	
+
 	var collision: CollisionShape2D = CollisionShape2D.new()
 	var shape: CircleShape2D = CircleShape2D.new()
 	shape.radius = get_slow_radius()
 	collision.shape = shape
 	_slow_area.add_child(collision)
-	
+
 	# 连接信号
 	_slow_area.body_entered.connect(_on_enemy_entered)
 	_slow_area.body_exited.connect(_on_enemy_exited)
-	
+
 	# 添加到场景
 	owner_node.get_tree().current_scene.add_child(_slow_area)
 	_slow_area.global_position = owner_node.global_position
@@ -180,10 +180,10 @@ func _on_enemy_entered(enemy: Node) -> void:
 	"""
 	if not _is_active:
 		return
-	
+
 	if not affect_new_targets:
 		return
-	
+
 	_apply_slow_to_enemy(enemy)
 
 
@@ -200,22 +200,26 @@ func _apply_slow_to_enemy(enemy: Node) -> void:
 	"""
 	if enemy == null or not is_instance_valid(enemy):
 		return
-	
+
 	# 应用移动速度减缓
 	if "speed_modifier" in enemy:
 		enemy.speed_modifier = 1.0 - get_slow_percent()
 	elif "move_speed" in enemy:
 		enemy.set_meta("original_speed", enemy.move_speed)
 		enemy.move_speed *= (1.0 - get_slow_percent())
-	
+
 	# 应用攻击速度减缓
 	if "attack_speed_modifier" in enemy:
 		enemy.attack_speed_modifier = 1.0 - attack_speed_slow
-	
+
+	# VFX: 减速冻结效果
+	if VFXManager:
+		VFXManager.spawn_status_vfx(enemy.global_position, "freeze")
+
 	# 添加到受影响列表
 	if enemy not in _affected_enemies:
 		_affected_enemies.append(enemy)
-	
+
 	enemy_slowed.emit(enemy, get_slow_percent())
 
 
@@ -225,18 +229,18 @@ func _remove_slow_from_enemy(enemy: Node) -> void:
 	"""
 	if enemy == null or not is_instance_valid(enemy):
 		return
-	
+
 	# 恢复移动速度
 	if "speed_modifier" in enemy:
 		enemy.speed_modifier = 1.0
 	elif enemy.has_meta("original_speed") and "move_speed" in enemy:
 		enemy.move_speed = enemy.get_meta("original_speed")
 		enemy.remove_meta("original_speed")
-	
+
 	# 恢复攻击速度
 	if "attack_speed_modifier" in enemy:
 		enemy.attack_speed_modifier = 1.0
-	
+
 	# 从受影响列表移除
 	if enemy in _affected_enemies:
 		_affected_enemies.erase(enemy)
@@ -249,7 +253,7 @@ func _remove_all_slow_effects() -> void:
 	for enemy in _affected_enemies:
 		if is_instance_valid(enemy):
 			_remove_slow_from_enemy(enemy)
-	
+
 	_affected_enemies.clear()
 
 
@@ -263,12 +267,12 @@ func _create_visual_effect() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_visual_effect = Node2D.new()
 	_visual_effect.name = "TimeSlowVisual"
 	_visual_effect.modulate = Color(0.3, 0.5, 1.0, 0.4)
 	_visual_effect.z_index = -1
-	
+
 	owner_node.get_tree().current_scene.add_child(_visual_effect)
 	_visual_effect.global_position = owner_node.global_position
 

@@ -41,7 +41,7 @@ func _init() -> void:
 	target_type = TargetType.POSITION
 	element = SkillElement.ARCANE
 	hotkey_slot = 3
-	
+
 	base_damage = 15.0
 	base_cooldown = 8.0
 	base_mana_cost = 20.0
@@ -58,22 +58,22 @@ func _execute_position_effect(target_position: Variant) -> void:
 	"""
 	if owner_node == null or target_position == null:
 		return
-	
+
 	var target_pos: Vector2 = target_position if target_position is Vector2 else Vector2.ZERO
 	var current_pos: Vector2 = owner_node.global_position
-	
+
 	# 限制距离
 	var direction: Vector2 = target_pos - current_pos
 	var distance: float = direction.length()
-	
+
 	if distance > get_max_distance():
 		direction = direction.normalized() * get_max_distance()
 		target_pos = current_pos + direction
-	
+
 	# 创建残影
 	if leave_afterimage:
 		_create_afterimage(current_pos)
-	
+
 	# 执行闪现
 	_perform_blink(target_pos)
 
@@ -82,19 +82,23 @@ func _perform_blink(target_pos: Vector2) -> void:
 	"""
 	执行闪现传送
 	"""
+	# VFX: 闪现冲刺拖尾
+	if VFXManager:
+		VFXManager.spawn_dash_trail(owner_node.global_position)
+
 	# 闪现前效果
 	_create_blink_effect(owner_node.global_position, true)
-	
+
 	# 传送
 	owner_node.global_position = target_pos
-	
+
 	# 闪现后效果
 	_create_blink_effect(target_pos, false)
-	
+
 	# 落点伤害
 	if arrival_damage:
 		_apply_arrival_damage(target_pos)
-	
+
 	# 无敌时间
 	if owner_node.has_method("start_invincibility"):
 		owner_node.start_invincibility(get_invincibility_time())
@@ -111,10 +115,10 @@ func _create_afterimage(pos: Vector2) -> void:
 	var afterimage: Node2D = Node2D.new()
 	afterimage.global_position = pos
 	afterimage.modulate = Color(0.5, 0.3, 0.8, 0.7)
-	
+
 	# 添加到场景
 	owner_node.get_tree().current_scene.add_child(afterimage)
-	
+
 	# 淡出效果
 	var tween: Tween = owner_node.create_tween()
 	tween.tween_property(afterimage, "modulate:a", 0.0, afterimage_duration)
@@ -127,13 +131,13 @@ func _create_blink_effect(pos: Vector2, is_start: bool) -> void:
 	"""
 	var effect: Node2D = Node2D.new()
 	effect.global_position = pos
-	
+
 	# 闪烁效果
 	var color: Color = Color(0.6, 0.3, 0.9) if is_start else Color(0.3, 0.6, 0.9)
 	effect.modulate = color
-	
+
 	owner_node.get_tree().current_scene.add_child(effect)
-	
+
 	# 快速扩散并消失
 	var tween: Tween = owner_node.create_tween()
 	tween.tween_property(effect, "modulate:a", 0.0, 0.2)
@@ -149,7 +153,7 @@ func _apply_arrival_damage(pos: Vector2) -> void:
 	应用落点伤害
 	"""
 	var targets: Array[Node] = _get_targets_in_area(pos, arrival_damage_range)
-	
+
 	for target in targets:
 		if target.has_method("take_damage"):
 			target.take_damage(get_damage(), owner_node)

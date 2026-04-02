@@ -4,6 +4,7 @@
 ## @version: 1.0.0
 
 extends Resource
+class_name PlayerStats
 
 # =============================================================================
 # 信号定义
@@ -102,6 +103,12 @@ const MANA_REGEN_RATE: float = 5.0
 ## 移动速度加成
 @export_range(0.0, 1.0) var move_speed_bonus: float = 0.0
 
+## 基础移动速度
+@export var base_speed: float = 200.0
+
+## 基础攻击力（计算用）
+@export var base_attack_power: float = 10.0
+
 # =============================================================================
 # 导出变量 - 属性点
 # =============================================================================
@@ -126,6 +133,7 @@ const MANA_REGEN_RATE: float = 5.0
 # =============================================================================
 
 var _is_initialized: bool = false
+var _flat_bonuses: Dictionary = {}  # {stat_name: bonus_value}
 
 # =============================================================================
 # 生命周期方法
@@ -416,6 +424,76 @@ func get_move_speed() -> float:
 	var total: float = move_speed_bonus
 	total += agility * 0.01  # 每点敏捷+1%移动速度
 	return total
+
+# =============================================================================
+# 公共方法 - 临时加成
+# =============================================================================
+
+## 添加固定值加成
+func add_flat_bonus(stat_name: String, value: float) -> void:
+	"""
+	添加临时固定值加成
+	@param stat_name: 属性名（speed, attack, defense, health）
+	@param value: 加成值
+	"""
+	if _flat_bonuses.has(stat_name):
+		_flat_bonuses[stat_name] += value
+	else:
+		_flat_bonuses[stat_name] = value
+	attributes_changed.emit()
+
+
+## 移除固定值加成
+func remove_flat_bonus(stat_name: String, value: float) -> void:
+	"""
+	移除临时固定值加成
+	@param stat_name: 属性名
+	@param value: 要移除的值
+	"""
+	if _flat_bonuses.has(stat_name):
+		_flat_bonuses[stat_name] -= value
+		if _flat_bonuses[stat_name] <= 0.001:
+			_flat_bonuses.erase(stat_name)
+	attributes_changed.emit()
+
+
+## 获取加成值
+func get_flat_bonus(stat_name: String) -> float:
+	"""
+	获取指定属性的临时加成
+	@param stat_name: 属性名
+	@return: 加成值
+	"""
+	return _flat_bonuses.get(stat_name, 0.0)
+
+
+## 消耗法力（技能系统使用的接口）
+func consume_mana(amount: float) -> bool:
+	"""
+	消耗法力
+	@param amount: 消耗量
+	@return: 是否成功
+	"""
+	return use_mana(amount)
+
+
+## 获取带加成的移动速度
+func get_total_speed() -> float:
+	"""
+	获取带加成的总移动速度
+	@return: 移动速度
+	"""
+	return base_speed * (1.0 + move_speed_bonus) + get_flat_bonus("speed")
+
+
+## 获取带加成的攻击力
+func get_total_attack() -> float:
+	"""
+	获取带加成的总攻击力
+	@return: 攻击力
+	"""
+	return get_attack() + get_flat_bonus("attack")
+
 
 # =============================================================================
 # 私有方法 - 升级

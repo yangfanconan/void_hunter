@@ -174,13 +174,13 @@ func _initialize_bullet() -> void:
 func _setup_collision() -> void:
 	"""设置碰撞层和掩码"""
 	if is_player_bullet:
-		# 玩家子弹：在第3层，检测敌人和障碍物（第2和第4层）
-		collision_layer = 4  # 第3层 (1 << 2)
-		collision_mask = 6   # 第2和第3层 (1 << 1 | 1 << 2)
+		# 玩家子弹：检测敌人(第2层)和障碍物(第5层)
+		collision_layer = 4  # 第3层 (子弹层)
+		collision_mask = 2 | 16   # 检测敌人(第2层)和障碍物(第5层)
 	else:
-		# 敌人子弹：在第3层，检测玩家和障碍物
-		collision_layer = 4  # 第3层
-		collision_mask = 12  # 第3和第4层 (1 << 2 | 1 << 3)
+		# 敌人子弹：检测玩家(第1层)和障碍物(第5层)
+		collision_layer = 4  # 第3层 (子弹层)
+		collision_mask = 1 | 16  # 检测玩家(第1层)和障碍物(第5层)
 
 
 func _ensure_collision_shape() -> void:
@@ -202,28 +202,39 @@ func _ensure_collision_shape() -> void:
 
 func _ensure_visual() -> void:
 	"""确保有视觉表现"""
-	var has_sprite: bool = false
+	# 检查是否已有视觉节点
 	for child in get_children():
-		if child is Sprite2D:
-			has_sprite = true
-			break
+		if child is AnimatedSprite2D or child is Sprite2D:
+			return
 	
-	if not has_sprite:
-		var sprite: Sprite2D = Sprite2D.new()
-		sprite.name = "Sprite"
-		var texture: ImageTexture = ImageTexture.new()
-		var size: int = int(10 * bullet_size)
-		var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-		
-		# 玩家子弹是青色，敌人子弹是红色
-		if is_player_bullet:
-			image.fill(Color(0.2, 0.8, 0.9))
-		else:
-			image.fill(Color(0.9, 0.3, 0.2))
-		
-		texture.set_image(image)
-		sprite.texture = texture
-		add_child(sprite)
+	# 尝试从 AnimationManager 加载子弹动画
+	var entity_id := "player_bullet" if is_player_bullet else "enemy_bullet"
+	if AnimationManager:
+		var sf: Variant = AnimationManager.get_sprite_frames(entity_id, "fly")
+		if sf:
+			var anim_sprite := AnimatedSprite2D.new()
+			anim_sprite.name = "BulletAnim"
+			anim_sprite.sprite_frames = sf
+			anim_sprite.play("fly")
+			anim_sprite.scale = Vector2.ONE * bullet_size
+			add_child(anim_sprite)
+			return
+	
+	# 后备：色块
+	var sprite: Sprite2D = Sprite2D.new()
+	sprite.name = "Sprite"
+	var texture: ImageTexture = ImageTexture.new()
+	var size: int = int(10 * bullet_size)
+	var image: Image = Image.create(size, size, false, Image.FORMAT_RGBA8)
+	
+	if is_player_bullet:
+		image.fill(Color(0.2, 0.8, 0.9))
+	else:
+		image.fill(Color(0.9, 0.3, 0.2))
+	
+	texture.set_image(image)
+	sprite.texture = texture
+	add_child(sprite)
 
 # =============================================================================
 # 私有方法 - 更新
@@ -240,6 +251,12 @@ func _destroy_bullet() -> void:
 		return
 	
 	_is_destroyed = true
+
+	# 生成命中火花特效
+	if VFXManager:
+		var color := Color(0.2, 0.8, 0.9) if is_player_bullet else Color(0.9, 0.3, 0.2)
+		VFXManager.spawn_hit_spark(global_position, color)
+
 	destroyed.emit()
 	queue_free()
 

@@ -353,7 +353,7 @@ func _on_button_focused(button: Button) -> void:
 	按钮获得焦点时的效果
 	@param button: 按钮引用
 	"""
-	AudioManager.play_ui_sound("button_hover")
+	AudioManager.play_sfx("button_hover")
 	
 	# 轻微缩放动画
 	var tween := create_tween()
@@ -369,7 +369,7 @@ func _on_restart_pressed() -> void:
 	"""
 	重新开始按钮按下
 	"""
-	AudioManager.play_ui_sound("button_click")
+	AudioManager.play_sfx("button_click")
 	hide_game_over()
 	restart_pressed.emit()
 	
@@ -381,7 +381,7 @@ func _on_main_menu_pressed() -> void:
 	"""
 	返回主菜单按钮按下
 	"""
-	AudioManager.play_ui_sound("button_click")
+	AudioManager.play_sfx("button_click")
 	hide_game_over()
 	main_menu_pressed.emit()
 	

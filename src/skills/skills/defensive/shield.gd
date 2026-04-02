@@ -55,7 +55,7 @@ func _init() -> void:
 	target_type = TargetType.SELF
 	element = SkillElement.ARCANE
 	hotkey_slot = 3
-	
+
 	base_damage = shatter_damage
 	base_cooldown = 12.0
 	base_mana_cost = 30.0
@@ -71,10 +71,10 @@ func initialize(owner: Node) -> void:
 
 func update(delta: float) -> void:
 	super.update(delta)
-	
+
 	if _shield_active:
 		_shield_timer -= delta
-		
+
 		if _shield_timer <= 0:
 			_expire_shield()
 		elif _shield_health <= 0:
@@ -92,7 +92,7 @@ func _execute_self_effect() -> void:
 	if _shield_active:
 		# 刷新护盾
 		_remove_shield()
-	
+
 	_create_shield()
 
 
@@ -104,10 +104,14 @@ func _create_shield() -> void:
 	_shield_max_health = _calculate_shield_health()
 	_shield_health = _shield_max_health
 	_shield_timer = get_shield_duration()
-	
+
+	# VFX: 护盾激活脉冲效果
+	if VFXManager:
+		VFXManager.spawn_effect("shield_pulse", owner_node.global_position)
+
 	# 创建护盾视觉效果
 	_create_shield_visual()
-	
+
 	# 连接伤害信号
 	if owner_node and "damaged" in owner_node:
 		if not owner_node.damaged.is_connected(_on_owner_damaged):
@@ -120,12 +124,12 @@ func _remove_shield() -> void:
 	"""
 	_shield_active = false
 	_shield_health = 0.0
-	
+
 	# 移除视觉效果
 	if _shield_visual and is_instance_valid(_shield_visual):
 		_shield_visual.queue_free()
 		_shield_visual = null
-	
+
 	# 断开信号
 	if owner_node and "damaged" in owner_node:
 		if owner_node.damaged.is_connected(_on_owner_damaged):
@@ -146,7 +150,7 @@ func _break_shield() -> void:
 	"""
 	# 触发爆炸效果
 	_trigger_shatter_explosion()
-	
+
 	shield_broken.emit()
 	_remove_shield()
 
@@ -157,17 +161,17 @@ func _trigger_shatter_explosion() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	var targets: Array[Node] = _get_targets_in_area(
-		owner_node.global_position, 
+		owner_node.global_position,
 		get_shatter_range()
 	)
-	
+
 	var damage: float = get_damage()
 	for target in targets:
 		if target.has_method("take_damage"):
 			target.take_damage(damage, owner_node)
-	
+
 	# 创建爆炸视觉效果
 	_create_shatter_visual()
 
@@ -182,16 +186,16 @@ func _create_shield_visual() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_shield_visual = Node2D.new()
 	_shield_visual.name = "ShieldVisual"
-	
+
 	# 创建护盾圆形
 	var circle: Node2D = Node2D.new()
 	_shield_visual.add_child(circle)
-	
+
 	owner_node.add_child(_shield_visual)
-	
+
 	# 护盾闪烁动画
 	var tween: Tween = owner_node.create_tween()
 	tween.set_loops()
@@ -205,12 +209,12 @@ func _create_shatter_visual() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	# 创建爆炸效果
 	var explosion: Node2D = Node2D.new()
 	explosion.modulate = Color(0.5, 0.7, 1.0, 1.0)
 	owner_node.add_child(explosion)
-	
+
 	# 淡出并移除
 	var tween: Tween = owner_node.create_tween()
 	tween.tween_property(explosion, "modulate:a", 0.0, 0.3)
@@ -226,13 +230,13 @@ func _calculate_shield_health() -> float:
 	计算护盾生命值
 	"""
 	var base_shield: float = shield_flat_health
-	
+
 	# 如果拥有者有属性系统，基于最大生命值计算
 	if owner_node and "stats" in owner_node:
 		var stats: PlayerStats = owner_node.stats
 		if stats:
 			base_shield += stats.max_health * shield_health_percent
-	
+
 	return base_shield
 
 
@@ -262,13 +266,13 @@ func absorb_damage(amount: float) -> float:
 	"""
 	if not _shield_active or _shield_health <= 0:
 		return amount
-	
+
 	var absorbed: float = minf(_shield_health, amount)
 	_shield_health -= absorbed
-	
+
 	# 更新视觉效果
 	_update_shield_visual()
-	
+
 	return amount - absorbed
 
 
@@ -305,7 +309,7 @@ func _update_shield_visual() -> void:
 	"""
 	if _shield_visual == null:
 		return
-	
+
 	# 根据护盾百分比调整透明度
 	var percent: float = get_shield_percent()
 	_shield_visual.modulate.a = 0.3 + percent * 0.7

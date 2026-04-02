@@ -35,23 +35,61 @@ signal all_enemies_cleared()
 # =============================================================================
 
 ## 基础敌人数量
-const BASE_ENEMY_COUNT: int = 5
+const BASE_ENEMY_COUNT: int = 15
 
 ## 每波敌人增加数量
-const ENEMY_INCREMENT: int = 2
+const ENEMY_INCREMENT: int = 5
 
 ## 精英出现间隔（每N波出现精英）
-const ELITE_INTERVAL: int = 5
+const ELITE_INTERVAL: int = 3
 
 ## 休息时间（秒）
-const BREAK_DURATION: float = 10.0
+const BREAK_DURATION: float = 5.0
 
 ## 最大同时存在敌人数量
-const MAX_ACTIVE_ENEMIES: int = 50
+const MAX_ACTIVE_ENEMIES: int = 100
 
 ## 生成范围
-const SPAWN_MIN_DISTANCE: float = 300.0
-const SPAWN_MAX_DISTANCE: float = 500.0
+const SPAWN_MIN_DISTANCE: float = 250.0
+const SPAWN_MAX_DISTANCE: float = 450.0
+
+# =============================================================================
+# 敌人属性缩放配置
+# =============================================================================
+
+## 每波生命值增加比例（10%）
+const HEALTH_SCALING_PER_WAVE: float = 0.1
+
+## 每波伤害增加比例（5%）
+const DAMAGE_SCALING_PER_WAVE: float = 0.05
+
+## 每波移动速度增加比例（2%）
+const SPEED_SCALING_PER_WAVE: float = 0.02
+
+## 每波奖励增加比例（5%）
+const REWARD_SCALING_PER_WAVE: float = 0.05
+
+# =============================================================================
+# 敌人类型解锁波次配置
+# =============================================================================
+
+## 远程敌人开始出现的波次
+const RANGED_UNLOCK_WAVE: int = 4
+
+## 精英敌人开始出现的波次
+const ELITE_UNLOCK_WAVE: int = 7
+
+## Boss开始出现的波次
+const BOSS_UNLOCK_WAVE: int = 11
+
+## Boss出现概率基础值（从第11波开始）
+const BOSS_SPAWN_BASE_CHANCE: float = 0.1
+
+## 每波Boss出现概率增加
+const BOSS_SPAWN_CHANCE_INCREMENT: float = 0.05
+
+## Boss出现间隔（每N波必有Boss）
+const BOSS_GUARANTEE_INTERVAL: int = 5
 
 # =============================================================================
 # 枚举定义
@@ -127,7 +165,7 @@ var entities_container: Node = null
 # =============================================================================
 
 var _spawn_timer: float = 0.0
-var _spawn_interval: float = 0.5
+var _spawn_interval: float = 0.15
 var _enemies_to_spawn: int = 0
 var _break_timer: float = 0.0
 var _spawn_queue: Array[Dictionary] = []
@@ -340,7 +378,8 @@ func _load_enemy_scripts() -> void:
 		"melee": preload("res://src/enemies/enemy_melee.gd"),
 		"ranged": preload("res://src/enemies/enemy_ranged.gd"),
 		"tank": preload("res://src/enemies/enemy_tank.gd"),
-		"elite": preload("res://src/enemies/enemy_elite.gd")
+		"elite": preload("res://src/enemies/enemy_elite.gd"),
+		"boss": preload("res://src/enemies/enemy_elite.gd")  # Boss暂时使用精英脚本（后续可创建专用Boss脚本）
 	}
 	print("[WaveManager] 敌人脚本已加载")
 
@@ -383,43 +422,88 @@ func _calculate_enemy_count() -> int:
 
 
 func _prepare_spawn_queue() -> void:
-	"""准备生成队列"""
+	"""准备生成队列，根据波次解锁不同敌人类型"""
 	_spawn_queue.clear()
 	
 	var enemy_count: int = wave_enemy_count
-	var difficulty: float = get_difficulty_multiplier()
 	
-	# 计算各类型敌人数量
-	var melee_count: int = int(enemy_count * 0.6)  # 60% 近战
-	var ranged_count: int = int(enemy_count * 0.25)  # 25% 远程
-	var tank_count: int = int(enemy_count * 0.1)  # 10% 坦克
+	# 根据波次计算各类型敌人数量
+	var melee_count: int = 0
+	var ranged_count: int = 0
+	var tank_count: int = 0
 	var elite_count: int = 0
+	var boss_count: int = 0
 	
-	# 检查是否是精英波
-	if spawn_elites and current_wave % elite_interval == 0:
-		elite_count = 1 + current_wave / elite_interval / 2
-		elite_count = mini(elite_count, 3)  # 最多3个精英
+	# 波次 1-3: 只有近战敌人
+	if current_wave <= 3:
+		melee_count = enemy_count
+	# 波次 4-6: 加入远程敌人
+	elif current_wave <= 6:
+		melee_count = int(enemy_count * 0.7)  # 70% 近战
+		ranged_count = int(enemy_count * 0.3)  # 30% 远程
+	# 波次 7-10: 加入精英敌人
+	elif current_wave <= 10:
+		melee_count = int(enemy_count * 0.5)  # 50% 近战
+		ranged_count = int(enemy_count * 0.3)  # 30% 远程
+		elite_count = int(enemy_count * 0.15)  # 15% 精英
+		tank_count = int(enemy_count * 0.05)   # 5% 坦克
+	# 波次 11+: 有几率生成Boss
+	else:
+		melee_count = int(enemy_count * 0.4)  # 40% 近战
+		ranged_count = int(enemy_count * 0.25)  # 25% 远程
+		elite_count = int(enemy_count * 0.2)  # 20% 精英
+		tank_count = int(enemy_count * 0.1)   # 10% 坦克
+		
+		# 检查是否生成Boss
+		if _should_spawn_boss():
+			boss_count = 1
+			# Boss占用精英名额
+			if elite_count > 0:
+				elite_count -= 1
 	
-	# 补足差额
-	var total: int = melee_count + ranged_count + tank_count + elite_count
+	# 补足差额（给近战敌人）
+	var total: int = melee_count + ranged_count + tank_count + elite_count + boss_count
 	if total < enemy_count:
 		melee_count += enemy_count - total
 	
 	# 添加到队列
 	for i in range(melee_count):
-		_spawn_queue.append({"type": "melee", "difficulty": difficulty})
+		_spawn_queue.append({"type": "melee", "wave": current_wave})
 	
 	for i in range(ranged_count):
-		_spawn_queue.append({"type": "ranged", "difficulty": difficulty})
+		_spawn_queue.append({"type": "ranged", "wave": current_wave})
 	
 	for i in range(tank_count):
-		_spawn_queue.append({"type": "tank", "difficulty": difficulty})
+		_spawn_queue.append({"type": "tank", "wave": current_wave})
 	
 	for i in range(elite_count):
-		_spawn_queue.append({"type": "elite", "difficulty": difficulty})
+		_spawn_queue.append({"type": "elite", "wave": current_wave})
+	
+	for i in range(boss_count):
+		_spawn_queue.append({"type": "boss", "wave": current_wave})
 	
 	# 随机打乱顺序
 	_shuffle_spawn_queue()
+	
+	print("[WaveManager] 生成队列准备完成: 近战=%d, 远程=%d, 坦克=%d, 精英=%d, Boss=%d" % [melee_count, ranged_count, tank_count, elite_count, boss_count])
+
+
+## 检查是否应该生成Boss
+func _should_spawn_boss() -> bool:
+	"""检查当前波次是否应该生成Boss"""
+	# 波次未达到解锁条件
+	if current_wave < BOSS_UNLOCK_WAVE:
+		return false
+	
+	# 检查是否是必定生成Boss的波次（每N波必有Boss）
+	if (current_wave - BOSS_UNLOCK_WAVE) % BOSS_GUARANTEE_INTERVAL == 0:
+		return true
+	
+	# 计算Boss出现概率
+	var boss_chance: float = BOSS_SPAWN_BASE_CHANCE + (current_wave - BOSS_UNLOCK_WAVE) * BOSS_SPAWN_CHANCE_INCREMENT
+	boss_chance = minf(boss_chance, 0.5)  # 最高50%概率
+	
+	return randf() < boss_chance
 
 
 func _shuffle_spawn_queue() -> void:
@@ -486,7 +570,7 @@ func _complete_wave() -> void:
 	
 	# 触发信号
 	wave_completed.emit(current_wave)
-	break_started.emit(break_timer)
+	break_started.emit(_break_timer)
 	
 	# 播放音效
 	AudioManager.play_sfx("wave_complete", 0.8)
@@ -513,18 +597,19 @@ func _end_break() -> void:
 func _spawn_single_enemy(spawn_data: Dictionary) -> Node:
 	"""生成单个敌人"""
 	var enemy_type: String = spawn_data.get("type", "melee")
-	var difficulty: float = spawn_data.get("difficulty", 1.0)
+	var wave_number: int = spawn_data.get("wave", current_wave)
 	var spawn_pos: Vector2 = _get_spawn_position()
 	
 	var enemy: Node = _spawn_enemy(enemy_type, spawn_pos)
 	
 	if enemy:
-		enemy.apply_difficulty(difficulty)
+		# 应用波次缩放（使用新的波次缩放方法）
+		enemy.apply_wave_scaling(wave_number)
 		active_enemies.append(enemy)
 		enemy_spawned.emit(enemy)
 		
-		# 如果是精英
-		if enemy_type == "elite":
+		# 如果是精英或Boss
+		if enemy_type == "elite" or enemy_type == "boss":
 			elite_spawned.emit(enemy)
 	
 	return enemy
@@ -571,6 +656,9 @@ func _spawn_enemy(enemy_type: String, position: Vector2) -> Node:
 		"elite":
 			color = Color(0.8, 0.5, 0.1)
 			image = Image.create(36, 36, false, Image.FORMAT_RGBA8)
+		"boss":
+			color = Color(0.6, 0.1, 0.8)  # 紫色表示Boss
+			image = Image.create(48, 48, false, Image.FORMAT_RGBA8)  # Boss最大
 		_:
 			image = Image.create(24, 24, false, Image.FORMAT_RGBA8)
 	
@@ -578,6 +666,21 @@ func _spawn_enemy(enemy_type: String, position: Vector2) -> Node:
 	texture.set_image(image)
 	sprite.texture = texture
 	enemy.add_child(sprite)
+	
+	# 为Boss设置特殊基础属性（在波次缩放之前）
+	if enemy_type == "boss":
+		enemy.set("max_health", 300.0)  # Boss基础生命值更高
+		enemy.set("attack_damage", 35.0)  # Boss基础伤害更高
+		enemy.set("move_speed", 70.0)  # Boss移动速度稍慢
+		enemy.set("experience_reward", 200)  # Boss经验值奖励更高
+		enemy.set("gold_reward", 150)  # Boss金币奖励更高
+		enemy.set("enemy_type", 4)  # 设置为Boss类型（枚举值4）
+		# 设置更大的碰撞半径
+		shape.radius = 24.0
+	elif enemy_type == "tank":
+		shape.radius = 16.0
+	elif enemy_type == "elite":
+		shape.radius = 18.0
 	
 	# 确定添加到哪个容器
 	var container: Node = entities_container

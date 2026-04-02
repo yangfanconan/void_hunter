@@ -43,7 +43,7 @@ const SKILL_GEM_SCENE: String = "res://scenes/items/skill_gem.tscn"
 # =============================================================================
 
 ## 技能持有者
-@export var owner: Node
+@export var skill_owner: Node
 
 ## 技能组合系统
 @export var combinations: SkillCombinations
@@ -78,10 +78,10 @@ func _ready() -> void:
 	"""
 	节点就绪时初始化
 	"""
-	if owner == null:
-		owner = get_parent()
+	if skill_owner == null:
+		skill_owner = get_parent()
 	
-	initialize(owner)
+	initialize(skill_owner)
 
 
 func _process(delta: float) -> void:
@@ -123,7 +123,7 @@ func initialize(skill_owner: Node) -> void:
 	if _is_initialized:
 		return
 	
-	owner = skill_owner
+	skill_owner = skill_owner
 	
 	# 初始化快捷键栏
 	_init_hotkey_bar()
@@ -170,7 +170,15 @@ func _load_all_skills() -> void:
 		
 		# 辅助类
 		"healing_aura": _create_skill_instance("SkillHealingAura"),
-		"speed_aura": _create_skill_instance("SkillSpeedAura")
+		"speed_aura": _create_skill_instance("SkillSpeedAura"),
+
+		# 弹幕类（高级攻击技能）
+		"fan_shot": _create_skill_instance("SkillFanShot"),
+		"homing_missile": _create_skill_instance("SkillHomingMissile"),
+		"circular_burst": _create_skill_instance("SkillCircularBurst"),
+		"laser_beam": _create_skill_instance("SkillLaserBeam"),
+		"lightning_storm": _create_skill_instance("SkillLightningStorm"),
+		"screen_nuke": _create_skill_instance("SkillScreenNuke")
 	}
 
 
@@ -207,6 +215,18 @@ func _create_skill_instance(class_name_str: String) -> SkillBase:
 			script_path = "res://src/skills/skills/support/healing_aura.gd"
 		"SkillSpeedAura":
 			script_path = "res://src/skills/skills/support/speed_aura.gd"
+		"SkillFanShot":
+			script_path = "res://src/skills/skills/offensive/fan_shot.gd"
+		"SkillHomingMissile":
+			script_path = "res://src/skills/skills/offensive/homing_missile.gd"
+		"SkillCircularBurst":
+			script_path = "res://src/skills/skills/offensive/circular_burst.gd"
+		"SkillLaserBeam":
+			script_path = "res://src/skills/skills/offensive/laser_beam.gd"
+		"SkillLightningStorm":
+			script_path = "res://src/skills/skills/offensive/lightning_storm.gd"
+		"SkillScreenNuke":
+			script_path = "res://src/skills/skills/offensive/screen_nuke.gd"
 	
 	if script_path.is_empty():
 		return null
@@ -224,7 +244,7 @@ func _init_combinations() -> void:
 	初始化技能组合系统
 	"""
 	skill_combinations = SkillCombinations.new()
-	skill_combinations.initialize(owner)
+	skill_combinations.initialize(skill_owner)
 	
 	# 连接信号
 	skill_combinations.combination_activated.connect(_on_combination_activated)
@@ -253,7 +273,7 @@ func acquire_skill(skill_id: String, level: int = 1) -> bool:
 	
 	# 创建新技能实例
 	var new_skill: SkillBase = template.duplicate()
-	new_skill.initialize(owner)
+	new_skill.initialize(skill_owner)
 	new_skill.unlock()
 	
 	# 设置等级
@@ -394,14 +414,14 @@ func _get_mouse_position() -> Vector2:
 	获取鼠标在世界中的位置
 	@return: 世界坐标
 	"""
-	if owner == null:
+	if skill_owner == null:
 		return Vector2.ZERO
 	
-	var camera: Camera2D = owner.get_viewport().get_camera_2d()
+	var camera: Camera2D = skill_owner.get_viewport().get_camera_2d()
 	if camera == null:
-		return owner.get_global_mouse_position()
+		return skill_owner.get_global_mouse_position()
 	
-	return owner.get_global_mouse_position()
+	return skill_owner.get_global_mouse_position()
 
 
 # =============================================================================
@@ -540,30 +560,29 @@ func toggle_skill_menu() -> void:
 	"""
 	切换技能选择菜单
 	"""
-	var skill_selection: SkillSelection = _get_skill_selection_ui()
+	var skill_selection: Node = _get_skill_selection_ui()
 	if skill_selection == null:
 		return
 	
 	if skill_selection.visible:
-		skill_selection.hide_skill_selection()
+		if skill_selection.has_method("hide_skill_selection"):
+			skill_selection.hide_skill_selection()
 	else:
 		# 显示技能选择界面
 		var skills: Array[Dictionary] = _generate_skill_options()
-		skill_selection.show_skill_selection(skills)
+		if skill_selection.has_method("show_skill_selection"):
+			skill_selection.show_skill_selection(skills)
 
 
-func _get_skill_selection_ui() -> SkillSelection:
+func _get_skill_selection_ui() -> Node:
 	"""
 	获取技能选择UI
 	"""
-	if owner == null:
+	if skill_owner == null:
 		return null
 	
-	var ui: Node = owner.get_tree().current_scene.find_child("SkillSelection", true, false)
-	if ui is SkillSelection:
-		return ui
-	
-	return null
+	var ui: Node = skill_owner.get_tree().current_scene.find_child("SkillSelection", true, false)
+	return ui
 
 
 func _generate_skill_options() -> Array[Dictionary]:

@@ -16,10 +16,11 @@ func load_game(slot: int = -1) -> bool:
 	print("[SaveManager] 从槽位 %d 加载游戏" % load_slot)
 	return true
 
-func has_save(slot: int = -1) -> bool:
+func has_save(_slot: int = -1) -> bool:
 	return false
 
-func delete_save(slot: int) -> bool:
+
+func delete_save(_slot: int) -> bool:
 	return true
 
 func auto_save() -> void:

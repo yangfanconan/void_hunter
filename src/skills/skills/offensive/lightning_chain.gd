@@ -38,7 +38,7 @@ func _init() -> void:
 	target_type = TargetType.ENEMY
 	element = SkillElement.LIGHTNING
 	hotkey_slot = 2
-	
+
 	base_damage = 30.0
 	base_cooldown = 4.0
 	base_mana_cost = 25.0
@@ -55,7 +55,7 @@ func _execute_enemy_effect(target: Node) -> void:
 	"""
 	if target == null:
 		return
-	
+
 	_execute_chain_lightning(target, get_damage(), [])
 
 
@@ -65,34 +65,38 @@ func _execute_chain_lightning(current_target: Node, damage: float, hit_list: Arr
 	"""
 	if current_target == null or not is_instance_valid(current_target):
 		return
-	
+
 	# 造成伤害
 	if current_target.has_method("take_damage"):
 		current_target.take_damage(damage, owner_node)
 		skill_hit.emit(self, current_target, damage)
-	
+
+	# VFX: lightning hit spark
+	if VFXManager:
+		VFXManager.spawn_effect("hit_spark", current_target.global_position, {"color": Color(1, 1, 0.4)})
+
 	# 应用眩晕
 	if randf() < get_stun_chance():
 		if current_target.has_method("apply_stun"):
 			current_target.apply_stun(get_stun_duration())
-	
+
 	# 创建闪电视觉效果
 	_create_lightning_visual(current_target)
-	
+
 	# 添加到已命中列表
 	hit_list.append(current_target)
-	
+
 	# 检查是否还能继续连锁
 	if hit_list.size() >= get_chain_targets():
 		return
-	
+
 	# 寻找下一个目标
 	var next_target: Node = _find_next_chain_target(current_target.global_position, hit_list)
-	
+
 	if next_target:
 		# 连锁伤害衰减
 		var next_damage: float = damage * (1.0 - chain_damage_decay)
-		
+
 		# 延迟一小段时间后继续连锁
 		await owner_node.get_tree().create_timer(0.1).timeout
 		_execute_chain_lightning(next_target, next_damage, hit_list)
@@ -104,14 +108,14 @@ func _find_next_chain_target(from_pos: Vector2, exclude_list: Array) -> Node:
 	"""
 	if owner_node == null:
 		return null
-	
+
 	var targets: Array[Node] = _get_targets_in_area(from_pos, get_chain_range())
-	
+
 	# 过滤已命中的目标
 	for target in targets:
 		if target not in exclude_list:
 			return target
-	
+
 	return null
 
 
@@ -121,16 +125,16 @@ func _create_lightning_visual(target: Node) -> void:
 	"""
 	if owner_node == null or target == null:
 		return
-	
+
 	# 创建简单的闪电线条
 	var line: Line2D = Line2D.new()
 	line.add_point(owner_node.global_position if hit_list.is_empty() else Vector2.ZERO)
 	line.add_point(target.global_position)
 	line.width = 3.0
 	line.default_color = Color(0.5, 0.7, 1.0, 1.0)
-	
+
 	owner_node.get_tree().current_scene.add_child(line)
-	
+
 	# 短暂显示后移除
 	await owner_node.get_tree().create_timer(0.15).timeout
 	line.queue_free()

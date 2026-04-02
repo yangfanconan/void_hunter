@@ -133,13 +133,17 @@ func _apply_effect(target: Node) -> void:
 	# 造成伤害
 	if target.has_method("take_damage"):
 		target.take_damage(damage, owner_node)
-	
+
+	# VFX: freeze hit effect
+	if VFXManager:
+		VFXManager.spawn_status_vfx(global_position, "freeze")
+
 	# 应用减速
 	if target.has_method("apply_slow"):
 		target.apply_slow(slow_percent, slow_duration)
 	elif "speed_modifier" in target:
 		target.speed_modifier = 1.0 - slow_percent
-	
+
 	# 检查冻结
 	if randf() < freeze_chance:
 		if target.has_method("apply_freeze"):

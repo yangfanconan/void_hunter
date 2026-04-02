@@ -55,7 +55,7 @@ func _init() -> void:
 	target_type = TargetType.SELF
 	element = SkillElement.HOLY
 	hotkey_slot = 0
-	
+
 	base_damage = 0.0
 	base_cooldown = 0.0
 	base_mana_cost = 0.0
@@ -91,13 +91,17 @@ func _activate_aura() -> void:
 	激活加速光环
 	"""
 	_is_active = true
-	
+
+	# VFX: 加速光环激活拖尾效果
+	if VFXManager:
+		VFXManager.spawn_dash_trail(owner_node.global_position)
+
 	# 应用属性加成
 	_apply_speed_bonuses()
-	
+
 	# 创建视觉效果
 	_create_aura_visual()
-	
+
 	aura_activated.emit()
 	speed_boost_applied.emit(get_movement_bonus(), get_attack_bonus())
 
@@ -107,15 +111,15 @@ func _deactivate_aura() -> void:
 	停用加速光环
 	"""
 	_is_active = false
-	
+
 	# 移除属性加成
 	_remove_speed_bonuses()
-	
+
 	# 移除视觉效果
 	if _aura_visual and is_instance_valid(_aura_visual):
 		_aura_visual.queue_free()
 		_aura_visual = null
-	
+
 	aura_deactivated.emit()
 
 
@@ -125,14 +129,14 @@ func _apply_speed_bonuses() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	# 应用移动速度加成
 	if "stats" in owner_node:
 		var stats: PlayerStats = owner_node.stats
 		if stats:
 			_original_speed_bonus = stats.speed_bonus_percent
 			stats.speed_bonus_percent += get_movement_bonus()
-	
+
 	# 如果影响友方
 	if affect_allies:
 		_apply_to_allies()
@@ -144,13 +148,13 @@ func _remove_speed_bonuses() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	# 恢复移动速度
 	if "stats" in owner_node:
 		var stats: PlayerStats = owner_node.stats
 		if stats:
 			stats.speed_bonus_percent = _original_speed_bonus
-	
+
 	# 移除友方加成
 	if affect_allies:
 		_remove_from_allies()
@@ -182,14 +186,14 @@ func _create_aura_visual() -> void:
 	"""
 	if owner_node == null:
 		return
-	
+
 	_aura_visual = Node2D.new()
 	_aura_visual.name = "SpeedAuraVisual"
 	_aura_visual.modulate = Color(1.0, 0.8, 0.2, 0.3)
 	_aura_visual.z_index = -1
-	
+
 	owner_node.add_child(_aura_visual)
-	
+
 	# 快速脉冲动画
 	var tween: Tween = owner_node.create_tween()
 	tween.set_loops()

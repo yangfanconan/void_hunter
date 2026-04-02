@@ -6,6 +6,13 @@
 extends Control
 
 # =============================================================================
+# 信号定义
+# =============================================================================
+
+## 技能按钮点击
+signal skill_button_pressed(slot: int)
+
+# =============================================================================
 # 节点引用
 # =============================================================================
 
@@ -21,219 +28,513 @@ extends Control
 @onready var _kills_label: Label = $TopRight/KillsLabel
 @onready var _level_label: Label = $TopRight/LevelLabel
 @onready var _exp_bar: ProgressBar = $ExpBar
-@onready var _exp_label: Label = $ExpBar/ExpLabel
+@onready var _exp_label: Label = $ExpBar/ExpLabel if has_node("ExpBar/ExpLabel") else null
+
+# 属性加成显示节点（使用 get_node_or_null 避免节点不存在时报错）
+@onready var _stats_panel: Panel = get_node_or_null("StatsPanel")
+@onready var _attack_bonus_label: Label = get_node_or_null("StatsPanel/VBoxContainer/AttackBonusLabel")
+@onready var _health_bonus_label: Label = get_node_or_null("StatsPanel/VBoxContainer/HealthBonusLabel")
+@onready var _speed_bonus_label: Label = get_node_or_null("StatsPanel/VBoxContainer/SpeedBonusLabel")
+@onready var _crit_bonus_label: Label = get_node_or_null("StatsPanel/VBoxContainer/CritBonusLabel")
+@onready var _life_steal_label: Label = get_node_or_null("StatsPanel/VBoxContainer/LifeStealLabel")
+
+## 技能栏节点引用（使用 get_node_or_null 避免节点不存在时报错）
+@onready var _skill_bar: HBoxContainer = get_node_or_null("BottomPanel/HBoxContainer/SkillBar")
 
 # =============================================================================
-# 私有变量
+# 公共变量
 # =============================================================================
 
 var _player_ref: Node = null
-var _player_stats: Resource = null
 var _game_time: float = 0.0
 
-# =============================================================================
-# 生命周期方法
-# =============================================================================
+# 上一次的属性值（用于检测变化）
+var _last_attack_bonus: float = 0.0
+var _last_health_bonus: int = 0
+var _last_speed_bonus: float = 0.0
+var _last_crit_bonus: float = 0.0
+var _last_life_steal: float = 0.0
+
+## 技能槽位节点缓存
+var _skill_slots: Array[Control] = []
+
+## 技能冷却遮罩
+var _cooldown_masks: Array[ColorRect] = []
+
+## 技能图标缓存
+var _skill_icons: Array[TextureRect] = []
+
+## 技能按钮缓存
+var _skill_buttons: Array[Button] = []
+
+## 当前技能信息缓存
+var _current_skills: Array[Dictionary] = []
 
 func _ready() -> void:
-	"""节点就绪"""
+	# 初始化属性加成显示节点（如果存在）
+	_init_stats_panel()
 	_update_display()
 
-
 func _process(delta: float) -> void:
-	"""每帧更新"""
 	if not visible:
 		return
 	
 	_game_time += delta
 	_update_display()
+	_update_from_player()
+	_update_skill_cooldowns()  # 更新技能冷却显示
 
-# =============================================================================
-# 公共方法
-# =============================================================================
-
-## 设置玩家引用
 func set_player(player: Node) -> void:
-	"""设置玩家引用并连接信号"""
 	_player_ref = player
-	
-	if _player_ref == null:
-		return
-	
-	# 获取玩家属性
-	if _player_ref.has("stats"):
-		_player_stats = _player_ref.stats
-		
-		# 连接属性变化信号
-		if _player_stats and _player_stats.has_signal("health_changed"):
-			if not _player_stats.health_changed.is_connected(_on_health_changed):
-				_player_stats.health_changed.connect(_on_health_changed)
-		
-		if _player_stats and _player_stats.has_signal("mana_changed"):
-			if not _player_stats.mana_changed.is_connected(_on_mana_changed):
-				_player_stats.mana_changed.connect(_on_mana_changed)
-		
-		if _player_stats and _player_stats.has_signal("stamina_changed"):
-			if not _player_stats.stamina_changed.is_connected(_on_stamina_changed):
-				_player_stats.stamina_changed.connect(_on_stamina_changed)
-		
-		if _player_stats and _player_stats.has_signal("experience_changed"):
-			if not _player_stats.experience_changed.is_connected(_on_experience_changed):
-				_player_stats.experience_changed.connect(_on_experience_changed)
-		
-		if _player_stats and _player_stats.has_signal("leveled_up"):
-			if not _player_stats.leveled_up.is_connected(_on_leveled_up):
-				_player_stats.leveled_up.connect(_on_leveled_up)
-		
-		# 初始显示
-		_update_player_stats()
-	
-	# 连接玩家信号
-	if _player_ref.has_signal("stats_changed"):
-		if not _player_ref.stats_changed.is_connected(_on_player_stats_changed):
-			_player_ref.stats_changed.connect(_on_player_stats_changed)
+	_update_from_player()
 
-
-## 更新生命值显示
 func update_health(current: float, maximum: float) -> void:
-	"""更新生命值显示"""
 	if _health_label:
 		_health_label.text = "HP: %d/%d" % [int(current), int(maximum)]
 	if _health_bar:
 		_health_bar.max_value = maximum
 		_health_bar.value = current
 
-
-## 更新法力值显示
 func update_mana(current: float, maximum: float) -> void:
-	"""更新法力值显示"""
 	if _mana_label:
 		_mana_label.text = "MP: %d/%d" % [int(current), int(maximum)]
 	if _mana_bar:
 		_mana_bar.max_value = maximum
 		_mana_bar.value = current
 
-
-## 更新体力值显示
 func update_stamina(current: float, maximum: float) -> void:
-	"""更新体力值显示"""
 	if _stamina_label:
 		_stamina_label.text = "体力: %d/%d" % [int(current), int(maximum)]
 	if _stamina_bar:
 		_stamina_bar.max_value = maximum
 		_stamina_bar.value = current
 
-
-## 更新经验值显示
 func update_exp(current: float, maximum: float) -> void:
-	"""更新经验值显示"""
 	if _exp_bar:
 		_exp_bar.max_value = maximum
 		_exp_bar.value = current
 	if _exp_label:
 		_exp_label.text = "EXP: %d/%d" % [int(current), int(maximum)]
 
-# =============================================================================
-# 私有方法
-# =============================================================================
-
 func _update_display() -> void:
-	"""更新所有显示"""
-	# 更新波次
 	if _wave_label:
 		var wave := 1
 		if GameManager:
 			wave = GameManager.get_current_wave()
 		_wave_label.text = "波次: %d" % wave
 	
-	# 更新时间
 	if _time_label:
 		var mins := int(_game_time) / 60
 		var secs := int(_game_time) % 60
 		_time_label.text = "时间: %02d:%02d" % [mins, secs]
 	
-	# 更新击杀数
 	if _kills_label:
 		var kills := 0
 		if GameManager:
 			kills = GameManager.get_total_kills()
 		_kills_label.text = "击杀: %d" % kills
-	
-	# 更新等级
-	if _level_label and _player_stats:
-		if _player_stats.has("level"):
-			_level_label.text = "等级: %d" % _player_stats.level
 
 
-func _update_player_stats() -> void:
-	"""更新玩家属性显示"""
-	if _player_stats == null:
+## 初始化属性加成面板节点
+func _init_stats_panel() -> void:
+	"""初始化属性加成面板节点（如果场景中存在）"""
+	if has_node("StatsPanel"):
+		_stats_panel = $StatsPanel
+		if has_node("StatsPanel/VBoxContainer/AttackBonusLabel"):
+			_attack_bonus_label = $StatsPanel/VBoxContainer/AttackBonusLabel
+		if has_node("StatsPanel/VBoxContainer/HealthBonusLabel"):
+			_health_bonus_label = $StatsPanel/VBoxContainer/HealthBonusLabel
+		if has_node("StatsPanel/VBoxContainer/SpeedBonusLabel"):
+			_speed_bonus_label = $StatsPanel/VBoxContainer/SpeedBonusLabel
+		if has_node("StatsPanel/VBoxContainer/CritBonusLabel"):
+			_crit_bonus_label = $StatsPanel/VBoxContainer/CritBonusLabel
+		if has_node("StatsPanel/VBoxContainer/LifeStealLabel"):
+			_life_steal_label = $StatsPanel/VBoxContainer/LifeStealLabel
+
+
+func _update_from_player() -> void:
+	if _player_ref == null or not is_instance_valid(_player_ref):
 		return
 	
-	# 更新生命值
-	if _player_stats.has("current_health") and _player_stats.has("max_health"):
-		update_health(_player_stats.current_health, _player_stats.max_health)
+	if "current_health" in _player_ref:
+		update_health(_player_ref.current_health, _player_ref.max_health)
 	
-	# 更新法力值
-	if _player_stats.has("current_mana") and _player_stats.has("max_mana"):
-		update_mana(_player_stats.current_mana, _player_stats.max_mana)
+	if "current_mana" in _player_ref:
+		update_mana(_player_ref.current_mana, _player_ref.max_mana)
 	
-	# 更新体力值
-	if _player_stats.has("current_stamina") and _player_stats.has("max_stamina"):
-		update_stamina(_player_stats.current_stamina, _player_stats.max_stamina)
+	if "current_stamina" in _player_ref:
+		update_stamina(_player_ref.current_stamina, _player_ref.max_stamina)
 	
-	# 更新经验值
-	if _player_stats.has("current_experience") and _player_stats.has("experience_required"):
-		update_exp(_player_stats.current_experience, _player_stats.experience_required)
+	if "current_exp" in _player_ref:
+		update_exp(_player_ref.current_exp, _player_ref.exp_required)
 	
-	# 更新等级
-	if _level_label and _player_stats.has("level"):
-		_level_label.text = "等级: %d" % _player_stats.level
+	if _level_label and "level" in _player_ref:
+		_level_label.text = "等级: %d" % _player_ref.level
+	
+	# 更新属性加成显示
+	_update_stat_bonuses()
+
+
+## 更新属性加成显示
+func _update_stat_bonuses() -> void:
+	"""更新属性加成面板的显示"""
+	if _player_ref == null or not is_instance_valid(_player_ref):
+		return
+	
+	# 获取属性加成值
+	var attack_bonus: float = _player_ref.get("attack_bonus_percent") if "attack_bonus_percent" in _player_ref else 0.0
+	var health_bonus: int = _player_ref.get("health_bonus") if "health_bonus" in _player_ref else 0
+	var speed_bonus: float = _player_ref.get("speed_bonus_percent") if "speed_bonus_percent" in _player_ref else 0.0
+	var crit_bonus: float = _player_ref.get("crit_chance_bonus") if "crit_chance_bonus" in _player_ref else 0.0
+	var life_steal: float = _player_ref.get("life_steal_percent") if "life_steal_percent" in _player_ref else 0.0
+	
+	# 检测是否有属性变化（用于高亮显示）
+	var has_change: bool = (
+		attack_bonus != _last_attack_bonus or
+		health_bonus != _last_health_bonus or
+		speed_bonus != _last_speed_bonus or
+		crit_bonus != _last_crit_bonus or
+		life_steal != _last_life_steal
+	)
+	
+	# 更新上一次的值
+	_last_attack_bonus = attack_bonus
+	_last_health_bonus = health_bonus
+	_last_speed_bonus = speed_bonus
+	_last_crit_bonus = crit_bonus
+	_last_life_steal = life_steal
+	
+	# 更新显示标签
+	if _attack_bonus_label:
+		if attack_bonus > 0:
+			_attack_bonus_label.text = "攻击力: +%.0f%%" % (attack_bonus * 100)
+			_attack_bonus_label.modulate = Color(1.0, 0.4, 0.4)  # 红色
+		else:
+			_attack_bonus_label.text = "攻击力: +0%"
+			_attack_bonus_label.modulate = Color(0.7, 0.7, 0.7)  # 灰色
+	
+	if _health_bonus_label:
+		if health_bonus > 0:
+			_health_bonus_label.text = "生命值: +%d" % health_bonus
+			_health_bonus_label.modulate = Color(0.4, 0.9, 0.5)  # 绿色
+		else:
+			_health_bonus_label.text = "生命值: +0"
+			_health_bonus_label.modulate = Color(0.7, 0.7, 0.7)
+	
+	if _speed_bonus_label:
+		if speed_bonus > 0:
+			_speed_bonus_label.text = "移动速度: +%.0f%%" % (speed_bonus * 100)
+			_speed_bonus_label.modulate = Color(1.0, 0.9, 0.4)  # 黄色
+		else:
+			_speed_bonus_label.text = "移动速度: +0%"
+			_speed_bonus_label.modulate = Color(0.7, 0.7, 0.7)
+	
+	if _crit_bonus_label:
+		if crit_bonus > 0:
+			_crit_bonus_label.text = "暴击率: +%.0f%%" % (crit_bonus * 100)
+			_crit_bonus_label.modulate = Color(1.0, 0.7, 0.3)  # 橙色
+		else:
+			_crit_bonus_label.text = "暴击率: +0%"
+			_crit_bonus_label.modulate = Color(0.7, 0.7, 0.7)
+	
+	if _life_steal_label:
+		if life_steal > 0:
+			_life_steal_label.text = "吸血: +%.0f%%" % (life_steal * 100)
+			_life_steal_label.modulate = Color(0.7, 0.4, 0.9)  # 紫色
+		else:
+			_life_steal_label.text = "吸血: +0%"
+			_life_steal_label.modulate = Color(0.7, 0.7, 0.7)
+	
+	# 如果有属性变化，播放高亮动画
+	if has_change and _stats_panel:
+		_play_stat_change_animation()
+
+
+## 播放属性变化高亮动画
+func _play_stat_change_animation() -> void:
+	"""播放属性变化时的高亮动画"""
+	if _stats_panel == null:
+		return
+	
+	# 创建缩放动画
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(_stats_panel, "modulate", Color(1.2, 1.2, 1.0), 0.15)
+	tween.tween_property(_stats_panel, "scale", Vector2(1.05, 1.05), 0.15)
+	
+	# 恢复
+	tween.set_parallel(false)
+	tween.tween_interval(0.1)
+	tween.set_parallel(true)
+	tween.tween_property(_stats_panel, "modulate", Color.WHITE, 0.2)
+	tween.tween_property(_stats_panel, "scale", Vector2.ONE, 0.2)
+
 
 # =============================================================================
-# 信号回调
+# 技能显示方法
 # =============================================================================
 
-func _on_health_changed(current: float, maximum: float) -> void:
-	"""生命值变化回调"""
-	update_health(current, maximum)
-
-
-func _on_mana_changed(current: float, maximum: float) -> void:
-	"""法力值变化回调"""
-	update_mana(current, maximum)
-
-
-func _on_stamina_changed(current: float, maximum: float) -> void:
-	"""体力值变化回调"""
-	update_stamina(current, maximum)
-
-
-func _on_experience_changed(current: float, required: float) -> void:
-	"""经验值变化回调"""
-	update_exp(current, required)
-
-
-func _on_leveled_up(new_level: int) -> void:
-	"""升级回调"""
-	if _level_label:
-		_level_label.text = "等级: %d" % new_level
+## 初始化技能栏
+func _init_skill_bar() -> void:
+	"""初始化技能栏显示"""
+	# 查找技能槽位
+	if _skill_bar == null:
+		# 尝试通过路径查找
+		_skill_bar = get_node_or_null("BottomPanel/HBoxContainer/SkillBar")
+		if _skill_bar == null:
+			_skill_bar = get_node_or_null("BottomPanel/SkillBar")
 	
-	# 播放升级动画
-	_play_level_up_animation()
+	if _skill_bar == null:
+		print("[HUD] 未找到技能栏节点")
+		return
+	
+	# 缓存技能槽位
+	_skill_slots.clear()
+	_cooldown_masks.clear()
+	_skill_icons.clear()
+	_skill_buttons.clear()
+	_current_skills.clear()
+	
+	for i in range(4):  # 最多4个技能槽
+		var slot_name := "SkillSlot%d" % (i + 1)
+		var slot: Control = _skill_bar.get_node_or_null(slot_name)
+		
+		if slot:
+			_skill_slots.append(slot)
+			
+			# 查找图标节点
+			var icon: TextureRect = slot.get_node_or_null("Icon")
+			if icon:
+				_skill_icons.append(icon)
+			else:
+				_skill_icons.append(null)
+			
+			# 查找按钮节点
+			var btn: Button = slot.get_node_or_null("Button")
+			if btn:
+				_skill_buttons.append(btn)
+				# 连接按钮信号
+				if not btn.pressed.is_connected(_on_skill_button_pressed.bind(i)):
+					btn.pressed.connect(_on_skill_button_pressed.bind(i))
+			else:
+				_skill_buttons.append(null)
+			
+			# 创建冷却遮罩
+			var mask := _create_cooldown_mask(slot)
+			_cooldown_masks.append(mask)
+			
+			# 初始化当前技能信息
+			_current_skills.append({"empty": true, "slot": i + 1})
+		else:
+			_skill_slots.append(null)
+			_skill_icons.append(null)
+			_skill_buttons.append(null)
+			_cooldown_masks.append(null)
+			_current_skills.append({"empty": true, "slot": i + 1})
+	
+	print("[HUD] 技能栏初始化完成，共 %d 个槽位" % _skill_slots.size())
 
 
-func _on_player_stats_changed(stats: Resource) -> void:
-	"""玩家属性变化回调"""
-	_player_stats = stats
-	_update_player_stats()
+## 创建冷却遮罩
+func _create_cooldown_mask(slot: Control) -> ColorRect:
+	"""为技能槽创建冷却遮罩"""
+	if slot == null:
+		return null
+	
+	var mask := ColorRect.new()
+	mask.name = "CooldownMask"
+	mask.color = Color(0.0, 0.0, 0.0, 0.6)
+	mask.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mask.set_anchors_preset(Control.PRESET_FULL_RECT)
+	mask.visible = false
+	slot.add_child(mask)
+	
+	return mask
 
 
-func _play_level_up_animation() -> void:
-	"""播放升级动画"""
-	if _level_label:
-		var tween := create_tween()
-		tween.tween_property(_level_label, "scale", Vector2(1.5, 1.5), 0.2)
-		tween.tween_property(_level_label, "scale", Vector2.ONE, 0.2)
-		tween.parallel().tween_property(_level_label, "modulate", Color.YELLOW, 0.1)
-		tween.tween_property(_level_label, "modulate", Color.WHITE, 0.2)
+## 更新技能显示
+func update_skills(skills: Array[Dictionary]) -> void:
+	"""更新技能栏显示"""
+	# 确保技能栏已初始化
+	if _skill_slots.is_empty():
+		_init_skill_bar()
+	
+	if _skill_slots.is_empty():
+		return
+	
+	# 更新每个槽位
+	for i in range(_skill_slots.size()):
+		var slot: Control = _skill_slots[i]
+		if slot == null:
+			continue
+		
+		var skill_info: Dictionary = skills[i] if i < skills.size() else {"empty": true, "slot": i + 1}
+		_current_skills[i] = skill_info
+		
+		var icon: TextureRect = _skill_icons[i]
+		var btn: Button = _skill_buttons[i]
+		
+		if skill_info.get("empty", true):
+			# 空槽位
+			if icon:
+				icon.texture = null
+				icon.modulate = Color(0.3, 0.3, 0.3, 0.5)
+			if btn:
+				btn.disabled = true
+			slot.modulate = Color(0.5, 0.5, 0.5)
+		else:
+			# 有技能
+			if icon:
+				# 设置技能图标
+				var icon_texture = _get_skill_icon(skill_info.get("id", ""))
+				if icon_texture:
+					icon.texture = icon_texture
+				else:
+					# 使用默认颜色块
+					icon.texture = _create_default_skill_icon(skill_info)
+				icon.modulate = Color.WHITE
+			
+			if btn:
+				btn.disabled = false
+			
+			slot.modulate = Color.WHITE
+
+
+## 更新技能冷却显示
+func update_skill_cooldown(slot_index: int, cooldown_progress: float, is_on_cooldown: bool) -> void:
+	"""更新单个技能的冷却显示"""
+	if slot_index < 0 or slot_index >= _cooldown_masks.size():
+		return
+	
+	var mask: ColorRect = _cooldown_masks[slot_index]
+	if mask == null:
+		return
+	
+	if is_on_cooldown:
+		mask.visible = true
+		# 根据冷却进度调整遮罩高度
+		var height_percent := 1.0 - cooldown_progress
+		mask.anchor_top = 0.0
+		mask.anchor_bottom = height_percent
+		mask.offset_top = 0
+		mask.offset_bottom = 0
+	else:
+		mask.visible = false
+
+
+## 获取技能图标
+func _get_skill_icon(skill_id: String) -> Texture2D:
+	"""根据技能ID获取图标"""
+	var icon_path := "res://assets/icons/skills/%s.png" % skill_id
+	if ResourceLoader.exists(icon_path):
+		return load(icon_path)
+	return null
+
+
+## 创建默认技能图标
+func _create_default_skill_icon(skill_info: Dictionary) -> Texture2D:
+	"""为没有图标的技能创建默认图标"""
+	var image := Image.create(48, 48, false, Image.FORMAT_RGBA8)
+	
+	# 根据元素类型选择颜色
+	var color := _get_element_color(skill_info.get("element", "PHYSICAL"))
+	image.fill(color)
+	
+	var texture := ImageTexture.new()
+	texture.set_image(image)
+	return texture
+
+
+## 获取元素颜色
+func _get_element_color(element: String) -> Color:
+	"""根据元素类型返回颜色"""
+	match element:
+		"FIRE": return Color(1.0, 0.4, 0.2)
+		"ICE": return Color(0.4, 0.8, 1.0)
+		"LIGHTNING": return Color(1.0, 1.0, 0.4)
+		"SHADOW": return Color(0.5, 0.3, 0.8)
+		"HOLY": return Color(1.0, 1.0, 0.8)
+		"ARCANE": return Color(0.7, 0.4, 1.0)
+		"PHYSICAL": return Color(0.7, 0.7, 0.7)
+		_: return Color(0.5, 0.5, 0.5)
+
+
+## 技能按钮点击回调
+func _on_skill_button_pressed(slot: int) -> void:
+	"""技能按钮被点击"""
+	skill_button_pressed.emit(slot)
+	print("[HUD] 技能槽 %d 被点击" % (slot + 1))
+
+
+## 设置玩家并连接技能信号
+func set_player_with_skills(player: Node) -> void:
+	"""设置玩家引用并连接技能变化信号"""
+	set_player(player)
+	
+	if player == null:
+		return
+	
+	# 初始化技能栏
+	_init_skill_bar()
+	
+	# 连接技能变化信号
+	if player.has_signal("skills_changed"):
+		if not player.skills_changed.is_connected(_on_player_skills_changed):
+			player.skills_changed.connect(_on_player_skills_changed)
+	
+	# 初始更新技能显示
+	if player.has_method("get_hotkey_skills"):
+		var skills = player.get_hotkey_skills()
+		update_skills(skills)
+
+
+## 玩家技能变化回调
+func _on_player_skills_changed() -> void:
+	"""玩家技能变化时的回调"""
+	if _player_ref == null or not is_instance_valid(_player_ref):
+		return
+	
+	if _player_ref.has_method("get_hotkey_skills"):
+		var skills = _player_ref.get_hotkey_skills()
+		update_skills(skills)
+
+
+## 每帧更新技能冷却
+func _update_skill_cooldowns() -> void:
+	"""更新所有技能的冷却显示"""
+	if _player_ref == null or not is_instance_valid(_player_ref):
+		return
+	
+	# 获取技能管理器
+	var sm = _player_ref.get("skill_manager")
+	if sm == null:
+		return
+	
+	# 更新每个槽位的冷却
+	for i in range(_current_skills.size()):
+		var skill_info: Dictionary = _current_skills[i]
+		if skill_info.get("empty", true):
+			continue
+		
+		var skill_id: String = skill_info.get("id", "")
+		if skill_id.is_empty():
+			continue
+		
+		# 获取技能实例
+		var skill = null
+		if sm.has_method("get_skill"):
+			skill = sm.get_skill(skill_id)
+		
+		if skill == null:
+			continue
+		
+		# 获取冷却信息
+		var is_on_cooldown: bool = false
+		var cooldown_progress: float = 1.0
+		
+		if "is_on_cooldown" in skill:
+			is_on_cooldown = skill.is_on_cooldown
+		if "get_cooldown_progress" in skill:
+			cooldown_progress = skill.get_cooldown_progress()
+		
+		update_skill_cooldown(i, cooldown_progress, is_on_cooldown)
