@@ -562,7 +562,8 @@ func _save_records(stats: Dictionary) -> void:
 	if not SaveManager:
 		return
 
-	var records := SaveManager.load_settings().get("records", {})
+	var settings: Dictionary = SaveManager.load_settings()
+		var records: Dictionary = settings.get("records", {})
 	var updated := false
 
 	if stats.get("game_time", 0.0) > records.get("best_time", 0.0):
@@ -576,7 +577,7 @@ func _save_records(stats: Dictionary) -> void:
 		updated = true
 
 	if updated:
-		var settings := SaveManager.load_settings()
+		var settings: Dictionary = SaveManager.load_settings()
 		settings["records"] = records
 		SaveManager.save_settings(settings)
 		print("[Game] 新纪录已保存!")
