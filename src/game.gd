@@ -54,6 +54,13 @@ var total_kills: int = 0
 @onready var _entities: Node2D = $GameWorld/Entities
 @onready var _projectiles: Node2D = $GameWorld/Projectiles
 @onready var _level_container: Node2D = $GameWorld/LevelContainer
+@onready var _game_over_screen: Control = get_node_or_null("CanvasLayer/GameOver")
+
+## 玩家造成总伤害
+var _total_damage_dealt: float = 0.0
+
+## 收集道具数
+var _items_collected: int = 0
 
 # =============================================================================
 # 信号定义
@@ -275,7 +282,13 @@ func _start_game() -> void:
 	# 重置游戏状态
 	game_time = 0.0
 	total_kills = 0
-	
+	_total_damage_dealt = 0.0
+	_items_collected = 0
+
+	# 隐藏游戏结束界面（如果存在）
+	if _game_over_screen:
+		_game_over_screen.hide()
+
 	# 创建玩家
 	_spawn_player()
 	
@@ -474,6 +487,8 @@ func _cleanup_game() -> void:
 	# 重置状态
 	game_time = 0.0
 	total_kills = 0
+	_total_damage_dealt = 0.0
+	_items_collected = 0
 
 
 func _pause_game() -> void:
@@ -494,10 +509,150 @@ func _resume_game() -> void:
 
 func _show_game_over() -> void:
 	"""显示游戏结束界面"""
-	# TODO: 实现游戏结束界面
 	print("[Game] 游戏结束!")
 	print("[Game] 存活时间: %.1f 秒" % game_time)
 	print("[Game] 总击杀: %d" % total_kills)
+
+	# 暂停游戏逻辑（但不暂停UI动画）
+	get_tree().paused = true
+
+	# 收集游戏统计数据
+	var stats := _collect_game_stats()
+
+	# 保存纪录
+	_save_records(stats)
+
+	if _game_over_screen:
+		# 使用已有的 GameOver UI
+		_game_over_screen.process_mode = Node.PROCESS_MODE_ALWAYS
+		_game_over_screen.show_game_over(false, stats)
+		# 连接游戏结束信号
+		if _game_over_screen.has_signal("restart_pressed") and not _game_over_screen.restart_pressed.is_connected(_on_game_over_restart):
+			_game_over_screen.restart_pressed.connect(_on_game_over_restart)
+		if _game_over_screen.has_signal("main_menu_pressed") and not _game_over_screen.main_menu_pressed.is_connected(_on_game_over_main_menu):
+			_game_over_screen.main_menu_pressed.connect(_on_game_over_main_menu)
+	else:
+		# 后备：动态创建简易游戏结束界面
+		_create_fallback_game_over(stats)
+
+
+func _collect_game_stats() -> Dictionary:
+	"""收集游戏统计数据"""
+	var stats := {
+		"game_time": game_time,
+		"enemies_killed": total_kills,
+		"level_reached": 1,
+		"damage_dealt": _total_damage_dealt,
+		"items_collected": _items_collected,
+	}
+
+	# 从波次管理器获取当前波次
+	if wave_manager and "current_wave" in wave_manager:
+		stats["level_reached"] = wave_manager.current_wave
+
+	# 从GameManager获取额外数据
+	if GameManager:
+		stats["total_experience"] = GameManager.total_experience if "total_experience" in GameManager else 0
+
+	return stats
+
+
+func _save_records(stats: Dictionary) -> void:
+	"""保存游戏纪录"""
+	if not SaveManager:
+		return
+
+	var records := SaveManager.load_settings().get("records", {})
+	var updated := false
+
+	if stats.get("game_time", 0.0) > records.get("best_time", 0.0):
+		records["best_time"] = stats["game_time"]
+		updated = true
+	if stats.get("enemies_killed", 0) > records.get("best_kills", 0):
+		records["best_kills"] = stats["enemies_killed"]
+		updated = true
+	if stats.get("level_reached", 0) > records.get("best_wave", 0):
+		records["best_wave"] = stats["level_reached"]
+		updated = true
+
+	if updated:
+		var settings := SaveManager.load_settings()
+		settings["records"] = records
+		SaveManager.save_settings(settings)
+		print("[Game] 新纪录已保存!")
+
+
+func _create_fallback_game_over(stats: Dictionary) -> void:
+	"""创建简易后备游戏结束界面"""
+	var overlay := ColorRect.new()
+	overlay.name = "FallbackGameOver"
+	overlay.color = Color(0, 0, 0, 0.7)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 1000
+	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.position = Vector2(400, 200)
+	overlay.add_child(vbox)
+
+	# 标题
+	var title := Label.new()
+	title.text = "游戏结束"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", Color.RED)
+	vbox.add_child(title)
+
+	# 统计信息
+	var info_text := "存活时间: %.1f秒\n击杀数: %d\n到达波次: %d\n总伤害: %.0f" % [
+		stats.get("game_time", 0.0),
+		stats.get("enemies_killed", 0),
+		stats.get("level_reached", 0),
+		stats.get("damage_dealt", 0.0)
+	]
+	var info := Label.new()
+	info.text = info_text
+	info.add_theme_font_size_override("font_size", 20)
+	info.add_theme_color_override("font_color", Color.WHITE)
+	vbox.add_child(info)
+
+	# 重新开始按钮
+	var restart_btn := Button.new()
+	restart_btn.text = "重新开始"
+	restart_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	restart_btn.pressed.connect(_on_game_over_restart)
+	vbox.add_child(restart_btn)
+
+	# 返回主菜单按钮
+	var menu_btn := Button.new()
+	menu_btn.text = "返回主菜单"
+	menu_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	menu_btn.pressed.connect(_on_game_over_main_menu)
+	vbox.add_child(menu_btn)
+
+	$CanvasLayer.add_child(overlay)
+
+
+func _on_game_over_restart() -> void:
+	"""游戏结束界面重新开始"""
+	get_tree().paused = false
+	var fallback = get_node_or_null("CanvasLayer/FallbackGameOver")
+	if fallback:
+		fallback.queue_free()
+	_cleanup_game()
+	_start_game()
+
+
+func _on_game_over_main_menu() -> void:
+	"""游戏结束界面返回主菜单"""
+	get_tree().paused = false
+	var fallback = get_node_or_null("CanvasLayer/FallbackGameOver")
+	if fallback:
+		fallback.queue_free()
+	_cleanup_game()
+	_show_main_menu()
+
 
 # =============================================================================
 # 私有方法 - 场景管理
@@ -593,6 +748,18 @@ func _on_player_damaged(amount: float, source: Node) -> void:
 	"""玩家受伤回调"""
 	if debug_mode:
 		print("[Game] 玩家受到伤害: ", amount)
+
+
+## 记录玩家造成伤害
+func record_damage_dealt(amount: float) -> void:
+	"""记录玩家造成的伤害"""
+	_total_damage_dealt += amount
+
+
+## 记录道具拾取
+func record_item_collected() -> void:
+	"""记录道具拾取"""
+	_items_collected += 1
 
 
 func _on_player_died() -> void:
