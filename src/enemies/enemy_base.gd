@@ -174,6 +174,14 @@ var _difficulty_applied: bool = false
 var _anim_sprite: AnimatedSprite2D = null
 var _current_anim: String = "idle"
 
+# 状态效果相关
+var speed_modifier: float = 1.0
+var burn_damage: float = 0.0
+var burn_timer: float = 0.0
+var _shadow_mark_timer: float = 0.0
+var _is_frozen: bool = false
+var _is_stunned: bool = false
+
 # =============================================================================
 # 生命周期方法
 # =============================================================================
@@ -840,6 +848,122 @@ func _grant_rewards(killer: Node) -> void:
 	
 	# 金币
 	GameManager.add_gold(gold_reward)
+
+# =============================================================================
+# 状态效果方法（技能系统调用）
+# =============================================================================
+
+## 应用燃烧效果
+func apply_burn(dps: float, duration: float, source: Node = null) -> void:
+	"""
+	应用燃烧效果
+	@param dps: 每秒伤害
+	@param duration: 持续时间
+	@param source: 伤害来源
+	"""
+	burn_damage = dps
+	burn_timer = duration
+	# 如果有StatusEffectManager，使用它
+	if _has_status_manager():
+		StatusEffectManager.apply_burn(self, dps, duration, source)
+
+
+## 应用减速效果
+func apply_slow(percent: float, duration: float, source: Node = null) -> void:
+	"""
+	应用减速效果
+	@param percent: 减速百分比 (0-1)
+	@param duration: 持续时间
+	"""
+	speed_modifier = 1.0 - percent
+	if _has_status_manager():
+		StatusEffectManager.apply_slow(self, percent, duration, source)
+	# 自动恢复
+	var tween: Tween = create_tween()
+	tween.tween_callback(func(): speed_modifier = 1.0).set_delay(duration)
+
+
+## 应用冻结效果
+func apply_freeze(duration: float, source: Node = null) -> void:
+	"""
+	应用冻结效果
+	@param duration: 冻结时间
+	"""
+	_is_frozen = true
+	if _has_status_manager():
+		StatusEffectManager.apply_stun(self, duration, source)
+	var tween: Tween = create_tween()
+	tween.tween_callback(func(): _is_frozen = false).set_delay(duration)
+
+
+## 应用眩晕效果
+func apply_stun(duration: float, source: Node = null) -> void:
+	"""
+	应用眩晕效果
+	@param duration: 眩晕时间
+	"""
+	_is_stunned = true
+	_change_state(State.STUNNED)
+	if _has_status_manager():
+		StatusEffectManager.apply_stun(self, duration, source)
+	var tween: Tween = create_tween()
+	tween.tween_callback(func():
+		_is_stunned = false
+		if current_state == State.STUNNED:
+			_change_state(State.IDLE)
+	).set_delay(duration)
+
+
+## 应用暗影印记
+func apply_shadow_mark(duration: float) -> void:
+	"""
+	应用暗影印记
+	@param duration: 印记持续时间
+	"""
+	_shadow_mark_timer = duration
+
+
+## 检查是否有暗影印记
+func has_shadow_mark() -> bool:
+	"""
+	@return: 是否有暗影印记
+	"""
+	return _shadow_mark_timer > 0
+
+
+## 移除暗影印记
+func remove_shadow_mark() -> void:
+	"""
+	移除暗影印记
+	"""
+	_shadow_mark_timer = 0.0
+
+
+## 击退
+func knockback(direction: Vector2, force: float) -> void:
+	"""
+	击退敌人
+	@param direction: 击退方向
+	@param force: 击退力度
+	"""
+	_knockback_velocity = direction * force
+	is_knockback = true
+	var tween: Tween = create_tween()
+	tween.tween_callback(func(): is_knockback = false).set_delay(0.2)
+
+
+## 眩晕（兼容方法名）
+func stun(duration: float) -> void:
+	"""
+	眩晕（兼容接口）
+	"""
+	apply_stun(duration)
+
+
+## 检查是否有StatusEffectManager
+func _has_status_manager() -> bool:
+	return Engine.has_singleton("StatusEffectManager") or (get_tree() and get_tree().root.has_node("StatusEffectManager"))
+
 
 # =============================================================================
 # 碰撞检测
