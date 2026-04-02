@@ -286,8 +286,7 @@ func _get_allies_in_range() -> Array[Node]:
 	var allies: Array[Node] = []
 	if owner_node == null:
 		return allies
-	var space_state := owner_node.get_world_2d().direct_space_state
-	var bodies := owner_node.get_tree().get_nodes_in_group("allies")
+	var bodies: Array = owner_node.get_tree().get_nodes_in_group("allies")
 	for body in bodies:
 		if body == owner_node:
 			continue

@@ -8,7 +8,7 @@ extends Node
 const VERSION := "1.0.0"
 const GAME_NAME := "Void Hunter"
 
-enum GameState { LOADING, MAIN_MENU, PLAYING, PAUSED, GAME_OVER }
+enum GameState { LOADING, MAIN_MENU, CHARACTER_SELECT, PLAYING, PAUSED, SKILL_SELECTION, GAME_OVER }
 
 # =============================================================================
 # 导出变量
@@ -56,6 +56,15 @@ var total_kills: int = 0
 @onready var _level_container: Node2D = $GameWorld/LevelContainer
 @onready var _game_over_screen: Control = get_node_or_null("CanvasLayer/GameOver")
 
+## UI组件
+var _settings_menu: Control = null
+var _talent_tree_ui: Control = null
+var _skill_selection: Control = null
+var _character_select: Control = null
+
+## 当前选择的角色ID
+var _selected_character_id: String = "arcane_warlock"
+
 ## 玩家造成总伤害
 var _total_damage_dealt: float = 0.0
 
@@ -79,11 +88,51 @@ signal wave_completed(wave_number: int)
 func _ready() -> void:
 	"""节点就绪时初始化"""
 	await get_tree().process_frame
+	_initialize_ui_components()
 	_setup_signals()
 	_setup_level_background()
 	_show_main_menu()
 	_is_initialized = true
 	print("[Game] %s v%s 初始化完成" % [GAME_NAME, VERSION])
+
+
+func _initialize_ui_components() -> void:
+	"""初始化UI组件"""
+	# 查找或创建设置菜单
+	_settings_menu = _main_menu.get_node_or_null("SettingsMenu")
+	if _settings_menu == null:
+		# 创建设置菜单
+		var settings_script = load("res://src/ui/settings_menu.gd")
+		if settings_script:
+			_settings_menu = Control.new()
+			_settings_menu.name = "SettingsMenu"
+			_settings_menu.set_script(settings_script)
+			_main_menu.add_child(_settings_menu)
+
+	# 创建天赋树UI
+	var talent_script = load("res://src/ui/talent_tree_ui.gd")
+	if talent_script:
+		_talent_tree_ui = Control.new()
+		_talent_tree_ui.name = "TalentTreeUI"
+		_talent_tree_ui.set_script(talent_script)
+		add_child(_talent_tree_ui)
+		if _talent_tree_ui.has_signal("close_requested"):
+			_talent_tree_ui.close_requested.connect(_on_talent_tree_closed)
+
+	# 创建技能选择UI
+	var skill_script = load("res://src/ui/skill_selection.gd")
+	if skill_script:
+		_skill_selection = Control.new()
+		_skill_selection.name = "SkillSelection"
+		_skill_selection.set_script(skill_script)
+		add_child(_skill_selection)
+		if _skill_selection.has_signal("skill_selected"):
+			_skill_selection.skill_selected.connect(_on_skill_selected)
+		if _skill_selection.has_signal("selection_skipped"):
+			_skill_selection.selection_skipped.connect(_on_skill_selection_skipped)
+
+	# 查找角色选择界面
+	_character_select = _main_menu.get_node_or_null("CharacterSelect")
 
 
 func _process(delta: float) -> void:
@@ -171,32 +220,51 @@ func record_enemy_kill() -> void:
 
 func _setup_signals() -> void:
 	"""设置信号连接"""
-	# 主菜单按钮
-	var new_game_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonNewGame")
+	# 主菜单按钮 - 使用main_menu.tscn中的按钮名称
+	var start_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonContainer/ButtonStart")
+	var char_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonContainer/ButtonCharacter")
+	var settings_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonContainer/ButtonSettings")
+	var quit_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonContainer/ButtonQuit")
+
+	# 后备：使用旧版按钮名称
+	if start_btn == null:
+		start_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonNewGame")
+	if settings_btn == null:
+		settings_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonSettings")
+	if quit_btn == null:
+		quit_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonQuit")
 	var continue_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonContinue")
-	var settings_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonSettings")
-	var quit_btn = _main_menu.get_node_or_null("VBoxContainer/ButtonQuit")
-	
-	if new_game_btn and not new_game_btn.pressed.is_connected(_on_new_game_pressed):
-		new_game_btn.pressed.connect(_on_new_game_pressed)
+
+	if start_btn and not start_btn.pressed.is_connected(_on_new_game_pressed):
+		start_btn.pressed.connect(_on_new_game_pressed)
 	if continue_btn and not continue_btn.pressed.is_connected(_on_continue_pressed):
 		continue_btn.pressed.connect(_on_continue_pressed)
+	if char_btn and not char_btn.pressed.is_connected(_on_character_select_pressed):
+		char_btn.pressed.connect(_on_character_select_pressed)
 	if settings_btn and not settings_btn.pressed.is_connected(_on_settings_pressed):
 		settings_btn.pressed.connect(_on_settings_pressed)
 	if quit_btn and not quit_btn.pressed.is_connected(_on_quit_pressed):
 		quit_btn.pressed.connect(_on_quit_pressed)
-	
+
 	# 暂停菜单按钮
 	var resume_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonResume")
 	var pause_settings_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonSettings")
 	var main_menu_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonMainMenu")
-	
+	var talent_btn = _pause_menu.get_node_or_null("Panel/VBoxContainer/ButtonTalent")
+
 	if resume_btn and not resume_btn.pressed.is_connected(_on_pause_resume):
 		resume_btn.pressed.connect(_on_pause_resume)
 	if pause_settings_btn and not pause_settings_btn.pressed.is_connected(_on_pause_settings):
 		pause_settings_btn.pressed.connect(_on_pause_settings)
 	if main_menu_btn and not main_menu_btn.pressed.is_connected(_on_pause_main_menu):
 		main_menu_btn.pressed.connect(_on_pause_main_menu)
+	if talent_btn and not talent_btn.pressed.is_connected(_on_pause_talent):
+		talent_btn.pressed.connect(_on_pause_talent)
+
+	# HUD技能按钮信号
+	if _hud and _hud.has_signal("skill_button_pressed"):
+		if not _hud.skill_button_pressed.is_connected(_on_skill_button_pressed):
+			_hud.skill_button_pressed.connect(_on_skill_button_pressed)
 
 
 func _setup_level_background() -> void:
@@ -591,18 +659,44 @@ func _create_fallback_game_over(stats: Dictionary) -> void:
 	overlay.z_index = 1000
 	overlay.process_mode = Node.PROCESS_MODE_ALWAYS
 
+	# 主面板 - 居中显示
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -200.0
+	panel.offset_top = -200.0
+	panel.offset_right = 200.0
+	panel.offset_bottom = 200.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+	style.set_border_width_all(2)
+	style.border_color = Color(0.4, 0.35, 0.6)
+	style.set_corner_radius_all(12)
+	panel.add_theme_stylebox_override("panel", style)
+	overlay.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 30)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_right", 30)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	panel.add_child(margin)
+
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_CENTER)
-	vbox.position = Vector2(400, 200)
-	overlay.add_child(vbox)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 16)
+	margin.add_child(vbox)
 
 	# 标题
 	var title := Label.new()
 	title.text = "游戏结束"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 48)
-	title.add_theme_color_override("font_color", Color.RED)
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", Color(0.9, 0.3, 0.3))
 	vbox.add_child(title)
+
+	# 分隔线
+	var sep := HSeparator.new()
+	vbox.add_child(sep)
 
 	# 统计信息
 	var info_text := "存活时间: %.1f秒\n击杀数: %d\n到达波次: %d\n总伤害: %.0f" % [
@@ -613,23 +707,32 @@ func _create_fallback_game_over(stats: Dictionary) -> void:
 	]
 	var info := Label.new()
 	info.text = info_text
-	info.add_theme_font_size_override("font_size", 20)
+	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info.add_theme_font_size_override("font_size", 18)
 	info.add_theme_color_override("font_color", Color.WHITE)
 	vbox.add_child(info)
+
+	# 按钮容器
+	var btn_container := HBoxContainer.new()
+	btn_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_container.add_theme_constant_override("separation", 20)
+	vbox.add_child(btn_container)
 
 	# 重新开始按钮
 	var restart_btn := Button.new()
 	restart_btn.text = "重新开始"
+	restart_btn.custom_minimum_size = Vector2(120, 40)
 	restart_btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	restart_btn.pressed.connect(_on_game_over_restart)
-	vbox.add_child(restart_btn)
+	btn_container.add_child(restart_btn)
 
 	# 返回主菜单按钮
 	var menu_btn := Button.new()
 	menu_btn.text = "返回主菜单"
+	menu_btn.custom_minimum_size = Vector2(120, 40)
 	menu_btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	menu_btn.pressed.connect(_on_game_over_main_menu)
-	vbox.add_child(menu_btn)
+	btn_container.add_child(menu_btn)
 
 	$CanvasLayer.add_child(overlay)
 
@@ -693,7 +796,21 @@ func _on_continue_pressed() -> void:
 
 func _on_settings_pressed() -> void:
 	"""设置按钮点击"""
-	print("[Game] 打开设置...")
+	if _settings_menu and _settings_menu.has_method("show_settings"):
+		_settings_menu.show_settings()
+	else:
+		print("[Game] 设置菜单未初始化")
+
+
+func _on_character_select_pressed() -> void:
+	"""角色选择按钮点击"""
+	if _character_select:
+		_main_menu.visible = false
+		_character_select.visible = true
+		current_state = GameState.CHARACTER_SELECT
+	else:
+		print("[Game] 角色选择界面未初始化，直接开始游戏")
+		_start_game()
 
 
 func _on_quit_pressed() -> void:
@@ -731,7 +848,38 @@ func _on_pause_resume() -> void:
 
 func _on_pause_settings() -> void:
 	"""暂停菜单设置"""
-	print("[Game] 暂停菜单设置...")
+	if _settings_menu and _settings_menu.has_method("show_settings"):
+		_settings_menu.show_settings()
+
+
+func _on_pause_talent() -> void:
+	"""暂停菜单天赋树"""
+	if _talent_tree_ui and _talent_tree_ui.has_method("show_talent_tree"):
+		_talent_tree_ui.show_talent_tree()
+
+
+func _on_talent_tree_closed() -> void:
+	"""天赋树关闭回调"""
+	if current_state == GameState.PAUSED:
+		_resume_game()
+
+
+func _on_skill_button_pressed(slot: int) -> void:
+	"""技能按钮点击回调"""
+	if player and player.has_method("use_skill_at_slot"):
+		player.use_skill_at_slot(slot)
+
+
+func _on_skill_selected(skill_id: String) -> void:
+	"""技能选择回调"""
+	print("[Game] 选择技能: %s" % skill_id)
+	if player and player.has_method("learn_skill"):
+		player.learn_skill(skill_id)
+
+
+func _on_skill_selection_skipped() -> void:
+	"""跳过技能选择"""
+	print("[Game] 跳过技能选择")
 
 
 func _on_pause_main_menu() -> void:
