@@ -855,7 +855,9 @@ func apply_burn(dps: float, duration: float, source: Node = null) -> void:
 	burn_timer = duration
 	# 如果有StatusEffectManager，使用它
 	if _has_status_manager():
-		StatusEffectManager.apply_burn(self, dps, duration, source)
+		var _sm = _get_status_manager()
+		if _sm:
+			_sm.apply_burn(self, dps, duration, source)
 
 
 ## 应用减速效果
@@ -867,7 +869,9 @@ func apply_slow(percent: float, duration: float, source: Node = null) -> void:
 	"""
 	speed_modifier = 1.0 - percent
 	if _has_status_manager():
-		StatusEffectManager.apply_slow(self, percent, duration, source)
+		var _sm = _get_status_manager()
+		if _sm:
+			_sm.apply_slow(self, percent, duration, source)
 	# 自动恢复
 	var tween: Tween = create_tween()
 	tween.tween_callback(func(): speed_modifier = 1.0).set_delay(duration)
@@ -881,7 +885,9 @@ func apply_freeze(duration: float, source: Node = null) -> void:
 	"""
 	_is_frozen = true
 	if _has_status_manager():
-		StatusEffectManager.apply_stun(self, duration, source)
+		var _sm = _get_status_manager()
+		if _sm:
+			_sm.apply_stun(self, duration, source)
 	var tween: Tween = create_tween()
 	tween.tween_callback(func(): _is_frozen = false).set_delay(duration)
 
@@ -895,7 +901,9 @@ func apply_stun(duration: float, source: Node = null) -> void:
 	_is_stunned = true
 	_change_state(State.STUNNED)
 	if _has_status_manager():
-		StatusEffectManager.apply_stun(self, duration, source)
+		var _sm = _get_status_manager()
+		if _sm:
+			_sm.apply_stun(self, duration, source)
 	var tween: Tween = create_tween()
 	tween.tween_callback(func():
 		_is_stunned = false
@@ -953,6 +961,13 @@ func stun(duration: float) -> void:
 ## 检查是否有StatusEffectManager
 func _has_status_manager() -> bool:
 	return Engine.has_singleton("StatusEffectManager") or (get_tree() and get_tree().root.has_node("StatusEffectManager"))
+
+
+## 获取StatusEffectManager实例
+func _get_status_manager() -> Node:
+	if not _has_status_manager():
+		return null
+	return get_node_or_null("/root/StatusEffectManager")
 
 
 # =============================================================================
