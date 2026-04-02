@@ -51,19 +51,19 @@ func _build_ui() -> void:
 	_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_bg)
 
-	# 主面板 - 使用正确的居中方式
+	# 主面板 - 使用size + position居中
 	_panel = PanelContainer.new()
-	# 设置锚点和位置实现居中
+	_panel.custom_minimum_size = Vector2(500, 400)
+	# 使用中心和全矩形结合的方式
+	_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_panel.anchor_left = 0.5
 	_panel.anchor_top = 0.5
 	_panel.anchor_right = 0.5
 	_panel.anchor_bottom = 0.5
-	_panel.offset_left = -250.0
-	_panel.offset_top = -200.0
-	_panel.offset_right = 250.0
-	_panel.offset_bottom = 200.0
-	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel.offset_left = -250
+	_panel.offset_top = -200
+	_panel.offset_right = 250
+	_panel.offset_bottom = 200
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
 	style.border_color = Color(0.4, 0.35, 0.6)
