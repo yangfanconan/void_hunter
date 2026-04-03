@@ -192,3 +192,76 @@ func get_permanent_bonuses() -> Dictionary:
 	if pg:
 		return pg.get_permanent_bonuses()
 	return {}
+
+# =============================================================================
+# 关卡系统
+# =============================================================================
+
+## 当前关卡ID (0 = 无尽模式, 1-7 = 关卡模式)
+var current_level_id: int = 0
+
+## 已完成的关卡列表
+var completed_levels: Array = []
+
+## 关卡模式：无尽或关卡
+var is_endless_mode: bool = true
+
+## 当前关卡的Boss是否已生成
+var boss_spawned_this_level: bool = false
+
+## 开始关卡模式
+func start_level(level_id: int) -> bool:
+	"""开始指定关卡"""
+	current_level_id = level_id
+	is_endless_mode = false
+	boss_spawned_this_level = false
+	difficulty_multiplier = 1.0 + (level_id - 1) * 0.2
+	print("[GameManager] 开始关卡 %d" % level_id)
+	return true
+
+## 开始无尽模式
+func start_endless_mode() -> void:
+	"""开始无尽模式"""
+	current_level_id = 0
+	is_endless_mode = true
+	boss_spawned_this_level = false
+	difficulty_multiplier = 1.0
+	print("[GameManager] 开始无尽模式")
+
+## 检查是否是Boss波
+func is_boss_wave(wave: int) -> bool:
+	if is_endless_mode:
+		return wave > 0 and wave % 10 == 0
+	else:
+		var total_waves: int = 5 + (current_level_id - 1) * 2
+		return wave == total_waves and not boss_spawned_this_level
+
+## 标记Boss已生成
+func mark_boss_spawned() -> void:
+	boss_spawned_this_level = true
+
+## 保存关卡进度
+func _save_level_progress() -> void:
+	var save_data: Dictionary = {
+		"completed_levels": completed_levels,
+		"timestamp": Time.get_datetime_string_from_system()
+	}
+	var file: FileAccess = FileAccess.open("user://level_progress.dat", FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(save_data, "\t"))
+		file.close()
+		print("[GameManager] 关卡进度已保存")
+
+## 加载关卡进度
+func load_level_progress() -> void:
+	if not FileAccess.file_exists("user://level_progress.dat"):
+		return
+	var file: FileAccess = FileAccess.open("user://level_progress.dat", FileAccess.READ)
+	if file:
+		var json_string: String = file.get_as_text()
+		file.close()
+		var json: JSON = JSON.new()
+		if json.parse(json_string) == OK:
+			var data: Dictionary = json.data
+			completed_levels = data.get("completed_levels", [])
+			print("[GameManager] 加载关卡进度，已完成: %s" % str(completed_levels))
