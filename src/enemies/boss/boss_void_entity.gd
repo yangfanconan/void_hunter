@@ -86,7 +86,7 @@ func _setup_boss_drops() -> void:
 
 func _execute_charge(skill: Dictionary) -> void:
 	# 虚空实体的"冲锋"实际上是传送
-	if player == null or not is_instance_valid(player):
+	if target == null or not is_instance_valid(player):
 		return
 
 	# 淡出
@@ -97,7 +97,7 @@ func _execute_charge(skill: Dictionary) -> void:
 	# 传送到玩家附近随机位置
 	var angle: float = randf() * TAU
 	var distance: float = randf_range(100.0, 200.0)
-	global_position = player.global_position + Vector2(cos(angle), sin(angle)) * distance
+	global_position = target.global_position + Vector2(cos(angle), sin(angle)) * distance
 
 	# 淡入
 	tween = create_tween()

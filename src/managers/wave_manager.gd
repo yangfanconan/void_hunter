@@ -525,6 +525,15 @@ func _prepare_spawn_queue() -> void:
 ## 检查是否应该生成Boss
 func _should_spawn_boss() -> bool:
 	"""检查当前波次是否应该生成Boss"""
+	var gm = _get_game_manager()
+
+	# 关卡模式：使用GameManager的Boss波次判断
+	if gm and not gm.is_endless_mode:
+		if gm.is_boss_wave(current_wave):
+			return not gm.boss_spawned_this_level
+		return false
+
+	# 无尽模式默认逻辑
 	# 波次未达到解锁条件
 	if current_wave < BOSS_UNLOCK_WAVE:
 		return false
@@ -601,16 +610,18 @@ func _complete_wave() -> void:
 	"""完成当前波次"""
 	current_state = WaveState.BREAK
 	_break_timer = break_duration
-	
+
 	# 触发信号
 	wave_completed.emit(current_wave)
 	break_started.emit(_break_timer)
-	
+
 	# 播放音效
-	var am = _get_audio_manager()\n\t\tif am:\n\t\t\tam.play_sfx("wave_complete", 0.8)
-	
+	var am = _get_audio_manager()
+	if am:
+		am.play_sfx("wave_complete", 0.8)
+
 	print("[WaveManager] 第 %d 波完成" % current_wave)
-	
+
 	# 检查是否达到最大波次
 	if not endless_mode and current_wave >= max_wave:
 		# 游戏胜利

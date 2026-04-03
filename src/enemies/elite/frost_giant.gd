@@ -34,7 +34,7 @@ func _update_chase(_delta: float) -> void:
 	super._update_chase(_delta)
 
 	# 冰霜光环，减速附近玩家
-	if player and is_instance_valid(player):
-		if player.global_position.distance_to(global_position) <= 80.0:
-			if player.has_method("apply_slow"):
-				player.apply_slow(0.2, 0.5, self)
+	if target and is_instance_valid(target):
+		if target.global_position.distance_to(global_position) <= 80.0:
+			if target.has_method("apply_slow"):
+				target.apply_slow(0.2, 0.5, self)

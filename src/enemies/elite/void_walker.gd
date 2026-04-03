@@ -31,7 +31,7 @@ func _physics_process(delta: float) -> void:
 			_teleport_timer = _teleport_cooldown
 
 func _try_teleport() -> void:
-	if player == null or not is_instance_valid(player):
+	if target == null or not is_instance_valid(player):
 		return
 
 	# 淡出
@@ -40,8 +40,8 @@ func _try_teleport() -> void:
 	await tween.finished
 
 	# 传送到玩家背后
-	var behind := (player.global_position - global_position).normalized() * -100.0
-	global_position = player.global_position + behind
+	var behind := (target.global_position - global_position).normalized() * -100.0
+	global_position = target.global_position + behind
 
 	# 淡入
 	tween = create_tween()
