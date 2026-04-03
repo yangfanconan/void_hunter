@@ -49,3 +49,10 @@ logs/
 # Local configuration
 .env
 .env.local
+
+# Image assets (use Git LFS or external storage)
+assets/icons/skills/*.png
+assets/icons/items/*.png
+assets/sprites/**/*.png
+assets/backgrounds/*.png
+*.uid
