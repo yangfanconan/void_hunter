@@ -206,6 +206,9 @@ func handle_player_death() -> void:
 	current_state = GameState.GAME_OVER
 	player_died.emit()
 
+	# 播放游戏结束音效
+	AudioManager.play_sfx("game_over")
+
 	# 结束成就系统会话并提交记录
 	if AchievementManager:
 		AchievementManager.record_survival_time(game_time)
@@ -381,6 +384,9 @@ func _start_game() -> void:
 	# 开始成就系统会话
 	if AchievementManager:
 		AchievementManager.start_session()
+
+	# 播放游戏开始音效
+	AudioManager.play_sfx("wave_start")
 
 	# 创建玩家
 	_spawn_player()
@@ -1064,7 +1070,10 @@ func _on_player_stats_changed(stats: Resource) -> void:
 func _on_player_leveled_up(new_level: int) -> void:
 	"""玩家升级回调"""
 	print("[Game] 玩家升级到: ", new_level)
-	
+
+	# 播放升级音效
+	AudioManager.play_sfx("level_up")
+
 	# V2: 通知天赋树
 	if system_integrator:
 		system_integrator.on_player_level_up(new_level)
@@ -1080,6 +1089,9 @@ func _on_wave_started(wave_number: int) -> void:
 	if gm:
 		gm.set_wave(wave_number)
 
+	# 播放波次开始音效
+	AudioManager.play_sfx("wave_start", 0.8)
+
 	# V2: 设置波次主题
 	if system_integrator:
 		system_integrator.setup_wave_theme(wave_number)
@@ -1089,6 +1101,9 @@ func _on_wave_completed(wave_number: int) -> void:
 	"""波次完成回调"""
 	print("[Game] 第 %d 波完成" % wave_number)
 	wave_completed.emit(wave_number)
+
+	# 播放波次完成音效
+	AudioManager.play_sfx("wave_complete", 0.8)
 
 	# 通知成就系统
 	if AchievementManager:

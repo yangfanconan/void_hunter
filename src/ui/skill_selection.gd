@@ -313,12 +313,23 @@ func _update_option_panel(panel_node: Control, option: Dictionary) -> void:
 	var desc_label: Label = panel_node.find_child("DescLabel", true, false)
 	var stats_label: Label = panel_node.find_child("StatsLabel", true, false)
 	var button: Button = panel_node.find_child("SelectButton", true, false)
+	var icon_rect: TextureRect = panel_node.find_child("Icon", true, false)
 
 	if option.is_empty():
 		panel_node.hide()
 		return
 
 	panel_node.show()
+
+	# 加载技能图标
+	if icon_rect:
+		var skill_id: String = option.get("id", "")
+		var icon_path: String = SKILL_ICONS_PATH + skill_id + ".png"
+		if ResourceLoader.exists(icon_path):
+			icon_rect.texture = load(icon_path)
+		else:
+			# 使用默认图标或生成占位图标
+			icon_rect.texture = _generate_placeholder_icon(option)
 
 	if name_label:
 		name_label.text = option.get("name", "???")
@@ -343,17 +354,63 @@ func _update_option_panel(panel_node: Control, option: Dictionary) -> void:
 		button.disabled = false
 		button.text = "升级" if option.get("is_owned", false) else "选择"
 
+
+func _generate_placeholder_icon(option: Dictionary) -> ImageTexture:
+	"""生成占位图标，根据元素类型显示不同颜色"""
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	var element: String = option.get("element", "NONE")
+
+	# 根据元素选择颜色
+	var color: Color
+	match element:
+		"FIRE": color = Color(1.0, 0.3, 0.1, 0.8)
+		"ICE": color = Color(0.3, 0.7, 1.0, 0.8)
+		"LIGHTNING": color = Color(1.0, 1.0, 0.2, 0.8)
+		"SHADOW": color = Color(0.4, 0.2, 0.6, 0.8)
+		"HOLY": color = Color(1.0, 1.0, 0.8, 0.8)
+		"ARCANE": color = Color(0.6, 0.3, 0.9, 0.8)
+		"VOID": color = Color(0.3, 0.0, 0.5, 0.8)
+		"PHYSICAL": color = Color(0.6, 0.5, 0.4, 0.8)
+		_: color = Color(0.5, 0.5, 0.5, 0.8)
+
+	# 绘制圆形背景
+	var center := Vector2(32, 32)
+	for y in range(64):
+		for x in range(64):
+			var dist := Vector2(x, y).distance_to(center)
+			if dist <= 28:
+				img.set_pixel(x, y, color)
+			elif dist <= 30:
+				img.set_pixel(x, y, Color(color.r, color.g, color.b, 0.5))
+			else:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+
+	return ImageTexture.create_from_image(img)
+
 func _update_combination_panel(panel_node: Control, option: Dictionary) -> void:
 	var name_label: Label = panel_node.find_child("NameLabel", true, false)
 	var level_label: Label = panel_node.find_child("LevelLabel", true, false)
 	var desc_label: Label = panel_node.find_child("DescLabel", true, false)
 	var button: Button = panel_node.find_child("SelectButton", true, false)
+	var icon_rect: TextureRect = panel_node.find_child("Icon", true, false)
 
 	if option.is_empty():
 		panel_node.hide()
 		return
 
 	panel_node.show()
+
+	# 加载组合技能图标
+	if icon_rect:
+		var combo_id: String = option.get("id", "")
+		var icon_path: String = SKILL_ICONS_PATH + combo_id + ".png"
+		if ResourceLoader.exists(icon_path):
+			icon_rect.texture = load(icon_path)
+		else:
+			# 组合技能使用特殊颜色
+			var combo_color := Color(0.8, 0.5, 0.9, 0.8)
+			icon_rect.texture = _generate_placeholder_icon({"element": "ARCANE"})
+
 	if name_label: name_label.text = option.get("name", "???")
 	if level_label: level_label.text = "组合技能"
 	if desc_label: desc_label.text = option.get("description", "")
