@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://main_menu_scene"]
+[gd_scene load_steps=4 format=3 uid="uid://main_menu_scene"]
 
 [ext_resource type="Script" path="res://src/ui/main_menu.gd" id="script_main_menu"]
 [ext_resource type="Script" path="res://src/ui/settings_menu.gd" id="script_settings"]
+[ext_resource type="Script" path="res://src/ui/character_select.gd" id="script_character"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -94,27 +95,27 @@ theme_override_constants/separation = 12
 [node name="ButtonStart" type="Button" parent="VBoxContainer/ButtonContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-text = "UI_START_GAME"
+text = "开始游戏"
 
 [node name="ButtonCharacter" type="Button" parent="VBoxContainer/ButtonContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-text = "UI_CHARACTER_SELECT"
+text = "角色选择"
 
 [node name="ButtonCodex" type="Button" parent="VBoxContainer/ButtonContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-text = "UI_ITEM_CODEX"
+text = "物品图鉴"
 
 [node name="ButtonSettings" type="Button" parent="VBoxContainer/ButtonContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-text = "UI_SETTINGS"
+text = "设置"
 
 [node name="ButtonQuit" type="Button" parent="VBoxContainer/ButtonContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
-text = "UI_QUIT"
+text = "退出"
 
 [node name="VersionLabel" type="Label" parent="."]
 layout_mode = 1
@@ -151,6 +152,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("script_character")
 
 [node name="ItemCodex" type="Control" parent="."]
 visible = false

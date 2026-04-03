@@ -1,7 +1,7 @@
 ## Void Hunter - 主菜单控制器
 ## @description: 处理主菜单的交互和导航
 ## @author: Void Hunter Team
-## @version: 1.0.0
+## @version: 1.1.0
 
 extends Control
 
@@ -9,113 +9,178 @@ extends Control
 # 信号定义
 # =============================================================================
 
-## 新游戏按钮点击
-signal new_game_pressed()
+## 游戏开始请求
+signal game_start_requested(mode: String, level_id: int)
 
-## 继续游戏按钮点击
-signal continue_pressed()
-
-## 设置按钮点击
-signal settings_pressed()
-
-## 退出按钮点击
+## 退出游戏
 signal quit_pressed()
 
 # =============================================================================
 # 节点引用
 # =============================================================================
 
-@onready var _title: Label = $VBoxContainer/Title
-@onready var _button_new_game: Button = $VBoxContainer/ButtonNewGame
-@onready var _button_continue: Button = $VBoxContainer/ButtonContinue
-@onready var _button_settings: Button = $VBoxContainer/ButtonSettings
-@onready var _button_quit: Button = $VBoxContainer/ButtonQuit
+@onready var _button_container: VBoxContainer = $VBoxContainer/ButtonContainer
+@onready var _button_start: Button = $VBoxContainer/ButtonContainer/ButtonStart
+@onready var _button_character: Button = $VBoxContainer/ButtonContainer/ButtonCharacter
+@onready var _button_codex: Button = $VBoxContainer/ButtonContainer/ButtonCodex
+@onready var _button_settings: Button = $VBoxContainer/ButtonContainer/ButtonSettings
+@onready var _button_quit: Button = $VBoxContainer/ButtonContainer/ButtonQuit
+
+@onready var _character_select: Control = $CharacterSelect
+@onready var _settings_menu: Control = $SettingsMenu
+@onready var _item_codex: Control = $ItemCodex
+
+# =============================================================================
+# 私有变量
+# =============================================================================
+
+## 当前选中的关卡ID（0=无尽模式）
+var _selected_level_id: int = 0
+
+## 当前选中的角色
+var _selected_character: String = "wandering_swordsman"
 
 # =============================================================================
 # 生命周期方法
 # =============================================================================
 
 func _ready() -> void:
-	"""节点就绪时初始化"""
 	_setup_signals()
-	_check_save()
-	
-	# 设置标题样式
-	if _title:
-		_title.add_theme_font_size_override("font_size", 48)
-
+	_setup_sub_menus()
+	_load_game_manager_progress()
+	_show_main_buttons()
 
 func _input(event: InputEvent) -> void:
-	"""处理输入事件"""
-	if event.is_action_pressed("ui_accept"):
-		if _button_new_game:
-			_button_new_game.grab_focus()
+	if event.is_action_pressed("ui_cancel"):
+		# ESC键返回主菜单
+		if _character_select and _character_select.visible:
+			_show_main_buttons()
+		elif _settings_menu and _settings_menu.visible:
+			_show_main_buttons()
+		elif _item_codex and _item_codex.visible:
+			_show_main_buttons()
 
 # =============================================================================
 # 公共方法
 # =============================================================================
 
-## 显示菜单
 func show_menu() -> void:
-	"""显示主菜单"""
 	visible = true
-	_check_save()
+	_show_main_buttons()
 
-
-## 隐藏菜单
 func hide_menu() -> void:
-	"""隐藏主菜单"""
 	visible = false
 
 # =============================================================================
-# 私有方法
+# 私有方法 - 初始化
 # =============================================================================
 
 func _setup_signals() -> void:
-	"""设置信号连接"""
-	if _button_new_game:
-		_button_new_game.pressed.connect(_on_new_game)
-	if _button_continue:
-		_button_continue.pressed.connect(_on_continue)
+	if _button_start:
+		_button_start.pressed.connect(_on_start_game)
+	if _button_character:
+		_button_character.pressed.connect(_on_character_select)
+	if _button_codex:
+		_button_codex.pressed.connect(_on_codex)
 	if _button_settings:
 		_button_settings.pressed.connect(_on_settings)
 	if _button_quit:
 		_button_quit.pressed.connect(_on_quit)
 
+func _setup_sub_menus() -> void:
+	# 角色选择界面
+	if _character_select:
+		_character_select.visible = false
+		if _character_select.has_signal("character_selected"):
+			_character_select.character_selected.connect(_on_character_selected)
+		if _character_select.has_signal("back_pressed"):
+			_character_select.back_pressed.connect(_show_main_buttons)
 
-func _check_save() -> void:
-	"""检查存档是否存在"""
-	var has_save: bool = false
-	if SaveManager:
-		has_save = SaveManager.has_save()
-	
-	if _button_continue:
-		_button_continue.disabled = not has_save
+	# 设置界面
+	if _settings_menu:
+		_settings_menu.visible = false
+
+	# 物品图鉴
+	if _item_codex:
+		_item_codex.visible = false
+
+func _load_game_manager_progress() -> void:
+	var gm: Node = _get_game_manager()
+	if gm:
+		gm.load_level_progress()
+
+func _get_game_manager() -> Node:
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("GameManager")
+	return null
 
 # =============================================================================
-# 信号回调
+# 私有方法 - UI控制
 # =============================================================================
 
-func _on_new_game() -> void:
-	"""新游戏按钮点击"""
-	print("[MainMenu] 新游戏")
-	new_game_pressed.emit()
+func _show_main_buttons() -> void:
+	if _button_container:
+		_button_container.visible = true
 
+	if _character_select:
+		_character_select.visible = false
+	if _settings_menu:
+		_settings_menu.visible = false
+	if _item_codex:
+		_item_codex.visible = false
 
-func _on_continue() -> void:
-	"""继续游戏按钮点击"""
-	print("[MainMenu] 继续游戏")
-	continue_pressed.emit()
+func _hide_main_buttons() -> void:
+	if _button_container:
+		_button_container.visible = false
 
+# =============================================================================
+# 信号回调 - 主菜单按钮
+# =============================================================================
+
+func _on_start_game() -> void:
+	print("[MainMenu] 开始游戏 - 角色: %s" % _selected_character)
+
+	# 设置GameManager
+	var gm: Node = _get_game_manager()
+	if gm:
+		gm.selected_character = _selected_character
+		if _selected_level_id > 0:
+			gm.start_level(_selected_level_id)
+		else:
+			gm.start_endless_mode()
+
+	game_start_requested.emit("level" if _selected_level_id > 0 else "endless", _selected_level_id)
+
+func _on_character_select() -> void:
+	print("[MainMenu] 角色选择")
+	_hide_main_buttons()
+	if _character_select:
+		_character_select.visible = true
+		if _character_select.has_method("show_select"):
+			_character_select.show_select()
+
+func _on_codex() -> void:
+	print("[MainMenu] 物品图鉴")
+	_hide_main_buttons()
+	if _item_codex:
+		_item_codex.visible = true
 
 func _on_settings() -> void:
-	"""设置按钮点击"""
 	print("[MainMenu] 设置")
-	settings_pressed.emit()
-
+	_hide_main_buttons()
+	if _settings_menu:
+		_settings_menu.visible = true
 
 func _on_quit() -> void:
-	"""退出按钮点击"""
 	print("[MainMenu] 退出")
 	quit_pressed.emit()
 	get_tree().quit()
+
+# =============================================================================
+# 信号回调 - 子菜单
+# =============================================================================
+
+func _on_character_selected(character_id: String) -> void:
+	print("[MainMenu] 选择角色: %s" % character_id)
+	_selected_character = character_id
+	_show_main_buttons()
