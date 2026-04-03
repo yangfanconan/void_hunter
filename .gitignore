@@ -16,6 +16,7 @@ mono_crash.*.json
 
 # Build outputs
 build/
+export/
 *.apk
 *.aab
 *.xapk
