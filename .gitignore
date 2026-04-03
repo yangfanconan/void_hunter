@@ -57,3 +57,4 @@ assets/icons/items/*.png
 assets/sprites/**/*.png
 assets/backgrounds/*.png
 *.uid
+export/templates/
