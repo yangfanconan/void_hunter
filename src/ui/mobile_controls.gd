@@ -4,14 +4,20 @@ class_name MobileControls
 extends CanvasLayer
 
 signal move_direction_changed(direction: Vector2)
+signal attack_pressed()
+signal dash_pressed()
 signal skill_1_pressed()
 signal skill_2_pressed()
 signal skill_3_pressed()
 signal skill_4_pressed()
+signal item_1_pressed()
+signal item_2_pressed()
+signal item_3_pressed()
 
 ## 配置参数
 @export var joystick_size: float = 160.0
 @export var button_size: float = 80.0
+@export var small_button_size: float = 60.0
 @export var joystick_max_distance: float = 60.0
 
 ## 玩家引用
@@ -30,6 +36,9 @@ var _root: Control = null
 var _joystick_base: Control = null
 var _joystick_knob: Control = null
 var _skill_buttons: Array[Button] = []
+var _attack_button: Button = null
+var _dash_button: Button = null
+var _item_buttons: Array[Button] = []
 
 ## 是否可见
 var _controls_visible: bool = true
@@ -45,20 +54,29 @@ func _create_ui() -> void:
 	var screen_size := get_viewport().get_visible_rect().size
 	if screen_size.y <= 0:
 		screen_size = Vector2(1280, 720)
-	
+
 	# 创建根控件
 	_root = Control.new()
 	_root.name = "MobileControlsRoot"
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
-	
+
 	# 创建摇杆
 	_create_joystick(screen_size)
-	
+
+	# 创建攻击按钮（右下角）
+	_create_attack_button(screen_size)
+
+	# 创建冲刺按钮
+	_create_dash_button(screen_size)
+
 	# 创建技能按钮
 	_create_skill_buttons(screen_size)
-	
+
+	# 创建道具按钮
+	_create_item_buttons(screen_size)
+
 	print("[MobileControls] UI 创建完成, 屏幕尺寸: ", screen_size)
 
 
@@ -103,7 +121,7 @@ func _create_skill_buttons(screen_size: Vector2) -> void:
 	var spacing := 20.0
 	var start_x := screen_size.x - margin - button_size * 4 - spacing * 3
 	var btn_y := screen_size.y - margin - button_size
-	
+
 	for i in range(4):
 		var btn := Button.new()
 		btn.name = "Skill%dButton" % (i + 1)
@@ -112,7 +130,7 @@ func _create_skill_buttons(screen_size: Vector2) -> void:
 		btn.add_theme_font_size_override("font_size", 24)
 		btn.position = Vector2(start_x + i * (button_size + spacing), btn_y)
 		btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		
+
 		# 按钮样式
 		var btn_style := StyleBoxFlat.new()
 		btn_style.bg_color = Color(0.2, 0.2, 0.4, 0.8)
@@ -120,7 +138,7 @@ func _create_skill_buttons(screen_size: Vector2) -> void:
 		btn_style.set_border_width_all(2)
 		btn_style.set_corner_radius_all(10)
 		btn.add_theme_stylebox_override("normal", btn_style)
-		
+
 		var hover_style := StyleBoxFlat.new()
 		hover_style.bg_color = Color(0.3, 0.3, 0.5, 0.9)
 		hover_style.border_color = Color(0.6, 0.6, 0.8)
@@ -128,12 +146,107 @@ func _create_skill_buttons(screen_size: Vector2) -> void:
 		hover_style.set_corner_radius_all(10)
 		btn.add_theme_stylebox_override("hover", hover_style)
 		btn.add_theme_stylebox_override("pressed", hover_style)
-		
+
 		_root.add_child(btn)
 		_skill_buttons.append(btn)
-		
+
 		var skill_num := i + 1
 		btn.pressed.connect(_on_skill_button_pressed.bind(skill_num))
+
+
+func _create_attack_button(screen_size: Vector2) -> void:
+	"""创建攻击按钮"""
+	var margin := 100.0
+	var btn_size := button_size * 1.2
+	var btn_x := screen_size.x - margin - btn_size - 200
+	var btn_y := screen_size.y - margin - btn_size - 60
+
+	_attack_button = Button.new()
+	_attack_button.name = "AttackButton"
+	_attack_button.custom_minimum_size = Vector2(btn_size, btn_size)
+	_attack_button.text = "⚔"
+	_attack_button.add_theme_font_size_override("font_size", 28)
+	_attack_button.position = Vector2(btn_x, btn_y)
+	_attack_button.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var btn_style := StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.6, 0.2, 0.2, 0.8)
+	btn_style.border_color = Color(0.8, 0.4, 0.4)
+	btn_style.set_border_width_all(3)
+	btn_style.set_corner_radius_all(btn_size / 2)
+	_attack_button.add_theme_stylebox_override("normal", btn_style)
+
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = Color(0.8, 0.3, 0.3, 0.9)
+	pressed_style.border_color = Color(1.0, 0.5, 0.5)
+	pressed_style.set_border_width_all(3)
+	pressed_style.set_corner_radius_all(btn_size / 2)
+	_attack_button.add_theme_stylebox_override("pressed", pressed_style)
+
+	_root.add_child(_attack_button)
+	_attack_button.pressed.connect(_on_attack_pressed)
+
+
+func _create_dash_button(screen_size: Vector2) -> void:
+	"""创建冲刺按钮"""
+	var margin := 100.0
+	var btn_size := button_size * 0.9
+	var btn_x := screen_size.x - margin - btn_size - 320
+	var btn_y := screen_size.y - margin - btn_size
+
+	_dash_button = Button.new()
+	_dash_button.name = "DashButton"
+	_dash_button.custom_minimum_size = Vector2(btn_size, btn_size)
+	_dash_button.text = "➤"
+	_dash_button.add_theme_font_size_override("font_size", 24)
+	_dash_button.position = Vector2(btn_x, btn_y)
+	_dash_button.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var btn_style := StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.2, 0.4, 0.6, 0.8)
+	btn_style.border_color = Color(0.4, 0.6, 0.8)
+	btn_style.set_border_width_all(2)
+	btn_style.set_corner_radius_all(btn_size / 2)
+	_dash_button.add_theme_stylebox_override("normal", btn_style)
+
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = Color(0.3, 0.5, 0.7, 0.9)
+	pressed_style.border_color = Color(0.5, 0.7, 0.9)
+	pressed_style.set_border_width_all(2)
+	pressed_style.set_corner_radius_all(btn_size / 2)
+	_dash_button.add_theme_stylebox_override("pressed", pressed_style)
+
+	_root.add_child(_dash_button)
+	_dash_button.pressed.connect(_on_dash_pressed)
+
+
+func _create_item_buttons(screen_size: Vector2) -> void:
+	"""创建道具按钮"""
+	var margin := 30.0
+	var spacing := 10.0
+	var btn_y := screen_size.y - margin - small_button_size
+
+	for i in range(3):
+		var btn := Button.new()
+		btn.name = "Item%dButton" % (i + 1)
+		btn.custom_minimum_size = Vector2(small_button_size, small_button_size)
+		btn.text = str(i + 1)
+		btn.add_theme_font_size_override("font_size", 18)
+		btn.position = Vector2(margin + i * (small_button_size + spacing), btn_y)
+		btn.mouse_filter = Control.MOUSE_FILTER_STOP
+
+		var btn_style := StyleBoxFlat.new()
+		btn_style.bg_color = Color(0.3, 0.5, 0.3, 0.8)
+		btn_style.border_color = Color(0.5, 0.7, 0.5)
+		btn_style.set_border_width_all(2)
+		btn_style.set_corner_radius_all(8)
+		btn.add_theme_stylebox_override("normal", btn_style)
+
+		_root.add_child(btn)
+		_item_buttons.append(btn)
+
+		var item_num := i + 1
+		btn.pressed.connect(_on_item_button_pressed.bind(item_num))
 
 
 func _input(event: InputEvent) -> void:
@@ -228,12 +341,36 @@ func _reset_joystick() -> void:
 func _on_skill_button_pressed(skill_num: int) -> void:
 	"""技能按钮点击"""
 	print("[MobileControls] 技能 %d 按下" % skill_num)
-	
+	AudioManager.play_sfx("button_click")
+
 	match skill_num:
 		1: skill_1_pressed.emit()
 		2: skill_2_pressed.emit()
 		3: skill_3_pressed.emit()
 		4: skill_4_pressed.emit()
+
+
+func _on_attack_pressed() -> void:
+	"""攻击按钮点击"""
+	AudioManager.play_sfx("button_click")
+	attack_pressed.emit()
+
+
+func _on_dash_pressed() -> void:
+	"""冲刺按钮点击"""
+	AudioManager.play_sfx("button_click")
+	dash_pressed.emit()
+
+
+func _on_item_button_pressed(item_num: int) -> void:
+	"""道具按钮点击"""
+	print("[MobileControls] 道具 %d 按下" % item_num)
+	AudioManager.play_sfx("button_click")
+
+	match item_num:
+		1: item_1_pressed.emit()
+		2: item_2_pressed.emit()
+		3: item_3_pressed.emit()
 
 
 # =============================================================================
