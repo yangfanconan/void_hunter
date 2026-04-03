@@ -106,8 +106,9 @@ func _input(event: InputEvent) -> void:
 			return
 	
 	# 处理技能选择界面
-	if event.is_action_pressed("skill_menu"):
-		toggle_skill_menu()
+	# 注意：技能菜单现在通过升级时触发，不需要单独的快捷键
+	# if event.is_action_pressed("skill_menu"):
+	# 	toggle_skill_menu()
 
 
 # =============================================================================
@@ -157,17 +158,19 @@ func _load_all_skills() -> void:
 		"frost_arrow": _create_skill_instance("SkillFrostArrow"),
 		"lightning_chain": _create_skill_instance("SkillLightningChain"),
 		"shadow_slash": _create_skill_instance("SkillShadowSlash"),
-		
+		"void_rift": _create_skill_instance("SkillVoidRift"),
+		"meteor_strike": _create_skill_instance("SkillMeteorStrike"),
+
 		# 防御类
 		"shield": _create_skill_instance("SkillShield"),
 		"blink": _create_skill_instance("SkillBlink"),
 		"iron_wall": _create_skill_instance("SkillIronWall"),
 		"reflect": _create_skill_instance("SkillReflect"),
-		
+
 		# 控制类
 		"time_slow": _create_skill_instance("SkillTimeSlow"),
 		"gravity_field": _create_skill_instance("SkillGravityField"),
-		
+
 		# 辅助类
 		"healing_aura": _create_skill_instance("SkillHealingAura"),
 		"speed_aura": _create_skill_instance("SkillSpeedAura"),
@@ -178,7 +181,17 @@ func _load_all_skills() -> void:
 		"circular_burst": _create_skill_instance("SkillCircularBurst"),
 		"laser_beam": _create_skill_instance("SkillLaserBeam"),
 		"lightning_storm": _create_skill_instance("SkillLightningStorm"),
-		"screen_nuke": _create_skill_instance("SkillScreenNuke")
+		"screen_nuke": _create_skill_instance("SkillScreenNuke"),
+
+		# 召唤类
+		"skeleton_army": _create_skill_instance("SkillSkeletonArmy"),
+
+		# 被动类
+		"berserker_rage": _create_skill_instance("SkillBerserkerRage"),
+		"vampiric_aura": _create_skill_instance("SkillVampiricAura"),
+		"critical_mastery": _create_skill_instance("SkillCriticalMastery"),
+		"elemental_affinity": _create_skill_instance("SkillElementalAffinity"),
+		"swift_movement": _create_skill_instance("SkillSwiftMovement")
 	}
 
 
@@ -199,6 +212,10 @@ func _create_skill_instance(class_name_str: String) -> SkillBase:
 			script_path = "res://src/skills/skills/offensive/lightning_chain.gd"
 		"SkillShadowSlash":
 			script_path = "res://src/skills/skills/offensive/shadow_slash.gd"
+		"SkillVoidRift":
+			script_path = "res://src/skills/skills/offensive/void_rift.gd"
+		"SkillMeteorStrike":
+			script_path = "res://src/skills/skills/offensive/meteor_strike.gd"
 		"SkillShield":
 			script_path = "res://src/skills/skills/defensive/shield.gd"
 		"SkillBlink":
@@ -227,6 +244,18 @@ func _create_skill_instance(class_name_str: String) -> SkillBase:
 			script_path = "res://src/skills/skills/offensive/lightning_storm.gd"
 		"SkillScreenNuke":
 			script_path = "res://src/skills/skills/offensive/screen_nuke.gd"
+		"SkillSkeletonArmy":
+			script_path = "res://src/skills/skills/summon/skeleton_army.gd"
+		"SkillBerserkerRage":
+			script_path = "res://src/skills/skills/passive/berserker_rage.gd"
+		"SkillVampiricAura":
+			script_path = "res://src/skills/skills/passive/vampiric_aura.gd"
+		"SkillCriticalMastery":
+			script_path = "res://src/skills/skills/passive/critical_mastery.gd"
+		"SkillElementalAffinity":
+			script_path = "res://src/skills/skills/passive/elemental_affinity.gd"
+		"SkillSwiftMovement":
+			script_path = "res://src/skills/skills/passive/swift_movement.gd"
 	
 	if script_path.is_empty():
 		return null

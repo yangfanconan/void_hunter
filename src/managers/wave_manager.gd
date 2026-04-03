@@ -173,6 +173,21 @@ var _spawn_queue: Array[Dictionary] = []
 # 敌人脚本引用
 var _enemy_scripts: Dictionary = {}
 
+# Boss类型列表
+var _boss_types: Array[String] = [
+	"dungeon_lord",
+	"flame_emperor",
+	"frost_queen",
+	"void_entity",
+	"mechanical_overlord"
+]
+
+# 具体敌人类型列表
+var _melee_types: Array[String] = ["slime_forest", "skeleton_warrior", "goblin"]
+var _ranged_types: Array[String] = ["skeleton_archer", "dark_mage", "fire_imp"]
+var _tank_types: Array[String] = ["stone_golem", "iron_knight"]
+var _elite_types: Array[String] = ["shadow_assassin", "flame_titan", "frost_giant", "void_walker", "clockwork_guardian", "bone_dragon"]
+
 # =============================================================================
 # 生命周期方法
 # =============================================================================
@@ -372,14 +387,29 @@ func _find_entities_container() -> void:
 			entities_container = main.get_node_or_null("Entities")
 
 
+func _get_game_manager() -> Node:
+	"""安全获取GameManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("GameManager")
+	return null
+
+
+func _get_audio_manager() -> Node:
+	"""安全获取AudioManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("AudioManager")
+	return null
+
+
 func _load_enemy_scripts() -> void:
 	"""加载敌人脚本"""
+	# 基础敌人类型
 	_enemy_scripts = {
 		"melee": preload("res://src/enemies/enemy_melee.gd"),
 		"ranged": preload("res://src/enemies/enemy_ranged.gd"),
 		"tank": preload("res://src/enemies/enemy_tank.gd"),
 		"elite": preload("res://src/enemies/enemy_elite.gd"),
-		"boss": preload("res://src/enemies/enemy_elite.gd")  # Boss暂时使用精英脚本（后续可创建专用Boss脚本）
+		"boss": preload("res://src/enemies/boss/boss_base.gd")
 	}
 	print("[WaveManager] 敌人脚本已加载")
 
@@ -408,10 +438,14 @@ func _start_next_wave() -> void:
 	wave_started.emit(current_wave)
 	
 	# 更新游戏管理器
-	GameManager.set_wave(current_wave)
-	
+	var gm = _get_game_manager()
+	if gm:
+		gm.set_wave(current_wave)
+
 	# 播放音效
-	AudioManager.play_sfx("wave_start", 0.8)
+	var am = _get_audio_manager()
+	if am:
+		am.play_sfx("wave_start", 0.8)
 	
 	print("[WaveManager] 第 %d 波开始，敌人数量: %d" % [current_wave, wave_enemy_count])
 
@@ -573,7 +607,7 @@ func _complete_wave() -> void:
 	break_started.emit(_break_timer)
 	
 	# 播放音效
-	AudioManager.play_sfx("wave_complete", 0.8)
+	var am = _get_audio_manager()\n\t\tif am:\n\t\t\tam.play_sfx("wave_complete", 0.8)
 	
 	print("[WaveManager] 第 %d 波完成" % current_wave)
 	
@@ -600,11 +634,12 @@ func _spawn_single_enemy(spawn_data: Dictionary) -> Node:
 	var wave_number: int = spawn_data.get("wave", current_wave)
 	var spawn_pos: Vector2 = _get_spawn_position()
 	
-	var enemy: Node = _spawn_enemy(enemy_type, spawn_pos)
-	
+	var enemy: Node = _spawn_enemy(enemy_type, spawn_pos, wave_number)
+
 	if enemy:
 		# 应用波次缩放（使用新的波次缩放方法）
-		enemy.apply_wave_scaling(wave_number)
+		if enemy.has_method("apply_wave_scaling"):
+			enemy.apply_wave_scaling(wave_number)
 		active_enemies.append(enemy)
 		enemy_spawned.emit(enemy)
 		
@@ -615,11 +650,27 @@ func _spawn_single_enemy(spawn_data: Dictionary) -> Node:
 	return enemy
 
 
-func _spawn_enemy(enemy_type: String, position: Vector2) -> Node:
+func _spawn_enemy(enemy_type: String, position: Vector2, wave_number: int = 1) -> Node:
 	"""生成敌人"""
-	var enemy_script: GDScript = _enemy_scripts.get(enemy_type)
+	var specific_type: String = enemy_type
+
+	# 根据类型选择具体的敌人种类
+	match enemy_type:
+		"melee":
+			specific_type = _melee_types[randi() % _melee_types.size()]
+		"ranged":
+			specific_type = _ranged_types[randi() % _ranged_types.size()]
+		"tank":
+			specific_type = _tank_types[randi() % _tank_types.size()]
+		"elite":
+			specific_type = _elite_types[randi() % _elite_types.size()]
+		"boss":
+			specific_type = _select_boss_for_wave(wave_number)
+
+	# 尝试加载具体敌人脚本
+	var enemy_script: GDScript = _try_load_specific_enemy(specific_type, enemy_type)
 	if enemy_script == null:
-		enemy_script = _enemy_scripts["melee"]
+		enemy_script = _enemy_scripts.get(enemy_type, _enemy_scripts["melee"])
 	
 	# 创建敌人节点
 	var enemy: CharacterBody2D = CharacterBody2D.new()
@@ -728,6 +779,39 @@ func _clear_all_enemies() -> void:
 	for enemy in active_enemies:
 		if is_instance_valid(enemy):
 			enemy.queue_free()
-	
+
 	active_enemies.clear()
 	all_enemies_cleared.emit()
+
+
+func _select_boss_for_wave(wave: int) -> String:
+	"""根据波次选择Boss类型"""
+	# 根据波次范围选择主题对应的Boss
+	if wave < 10:
+		return "dungeon_lord"
+	elif wave < 20:
+		return "flame_emperor"
+	elif wave < 30:
+		return "frost_queen"
+	elif wave < 40:
+		return "mechanical_overlord"
+	else:
+		return "void_entity"
+
+
+func _try_load_specific_enemy(specific_type: String, fallback_type: String) -> GDScript:
+	"""尝试加载具体敌人脚本"""
+	var paths_to_try: Array[String] = [
+		"res://src/enemies/melee/%s.gd" % specific_type,
+		"res://src/enemies/ranged/%s.gd" % specific_type,
+		"res://src/enemies/tank/%s.gd" % specific_type,
+		"res://src/enemies/elite/%s.gd" % specific_type,
+		"res://src/enemies/boss/boss_%s.gd" % specific_type,
+	]
+
+	for path in paths_to_try:
+		if ResourceLoader.exists(path):
+			return load(path)
+
+	# 返回基础类型
+	return _enemy_scripts.get(fallback_type, _enemy_scripts["melee"])

@@ -401,23 +401,298 @@ func _generate_bsp_layout() -> void:
 	"""
 	使用二叉空间分割生成布局
 	"""
-	# TODO: 实现BSP算法
-	_generate_random_layout()
+	# BSP参数
+	var map_size := Vector2i(60, 60)
+	var min_room_size := 8
+	var max_splits := 4
+
+	# 创建根节点
+	var root := BSPNode.new(Rect2i(0, 0, map_size.x, map_size.y))
+	_split_node(root, max_splits, min_room_size)
+
+	# 从叶子节点创建房间
+	var leaf_nodes := _get_leaf_nodes(root)
+	for i in range(leaf_nodes.size()):
+		var node: BSPNode = leaf_nodes[i]
+		var room_rect := _create_room_in_node(node, min_room_size)
+
+		var room_type: RoomType = RoomType.STANDARD
+		if i == 0:
+			room_type = RoomType.START
+		elif i == leaf_nodes.size() - 1 and include_boss_room:
+			room_type = RoomType.BOSS
+		elif _rng.randf() < 0.15:
+			room_type = RoomType.ELITE
+
+		_create_room_from_rect(room_rect, room_type)
+
+	# 连接房间
+	_connect_bsp_rooms(root)
+
+
+func _split_node(node: BSPNode, depth: int, min_size: int) -> void:
+	if depth <= 0:
+		return
+
+	var rect := node.rect
+	var can_split_h := rect.size.y >= min_size * 2
+	var can_split_v := rect.size.x >= min_size * 2
+
+	if not can_split_h and not can_split_v:
+		return
+
+	var split_horizontal: bool
+	if can_split_h and can_split_v:
+		split_horizontal = _rng.randf() > 0.5
+	else:
+		split_horizontal = can_split_h
+
+	if split_horizontal:
+		var split_pos := _rng.randi_range(min_size, rect.size.y - min_size)
+		node.left = BSPNode.new(Rect2i(rect.position.x, rect.position.y, rect.size.x, split_pos))
+		node.right = BSPNode.new(Rect2i(rect.position.x, rect.position.y + split_pos, rect.size.x, rect.size.y - split_pos))
+	else:
+		var split_pos := _rng.randi_range(min_size, rect.size.x - min_size)
+		node.left = BSPNode.new(Rect2i(rect.position.x, rect.position.y, split_pos, rect.size.y))
+		node.right = BSPNode.new(Rect2i(rect.position.x + split_pos, rect.position.y, rect.size.x - split_pos, rect.size.y))
+
+	_split_node(node.left, depth - 1, min_size)
+	_split_node(node.right, depth - 1, min_size)
+
+
+func _get_leaf_nodes(node: BSPNode) -> Array:
+	var result := []
+	if node.left == null and node.right == null:
+		result.append(node)
+	else:
+		if node.left:
+			result.append_array(_get_leaf_nodes(node.left))
+		if node.right:
+			result.append_array(_get_leaf_nodes(node.right))
+	return result
+
+
+func _create_room_in_node(node: BSPNode, min_size: int) -> Rect2i:
+	var rect := node.rect
+	var room_width := _rng.randi_range(min_size, mini(rect.size.x - 2, MAX_ROOM_SIZE.x))
+	var room_height := _rng.randi_range(min_size, mini(rect.size.y - 2, MAX_ROOM_SIZE.y))
+	var room_x := rect.position.x + _rng.randi_range(1, rect.size.x - room_width - 1)
+	var room_y := rect.position.y + _rng.randi_range(1, rect.size.y - room_height - 1)
+	return Rect2i(room_x, room_y, room_width, room_height)
+
+
+func _create_room_from_rect(room_rect: Rect2i, room_type: RoomType) -> void:
+	var room_index: int = rooms.size()
+	var world_position: Vector2 = Vector2(room_rect.position * TILE_SIZE)
+
+	var enemy_count: int = 0
+	var item_count: int = 0
+
+	match room_type:
+		RoomType.STANDARD:
+			enemy_count = _rng.randi_range(3, 6)
+			item_count = _rng.randi_range(1, 3)
+		RoomType.ELITE:
+			enemy_count = _rng.randi_range(1, 3)
+			item_count = _rng.randi_range(3, 5)
+		RoomType.BOSS:
+			enemy_count = 1
+			item_count = _rng.randi_range(4, 6)
+		RoomType.START:
+			enemy_count = 0
+			item_count = 0
+
+	var room_data: Dictionary = {
+		"index": room_index,
+		"type": room_type,
+		"size": Vector2i(room_rect.size),
+		"position": room_rect.position,
+		"world_rect": Rect2(world_position, Vector2(room_rect.size * TILE_SIZE)),
+		"enemy_count": enemy_count,
+		"item_count": item_count,
+		"is_cleared": room_type == RoomType.START
+	}
+
+	rooms.append(room_data)
+	room_generated.emit(room_index, room_data)
+
+
+func _connect_bsp_rooms(root: BSPNode) -> void:
+	_connect_siblings(root)
+
+
+func _connect_siblings(node: BSPNode) -> void:
+	if node == null:
+		return
+
+	if node.left and node.right:
+		var left_rooms := _get_leaf_nodes(node.left)
+		var right_rooms := _get_leaf_nodes(node.right)
+
+		if not left_rooms.is_empty() and not right_rooms.is_empty():
+			var left: BSPNode = left_rooms[_rng.randi() % left_rooms.size()]
+			var right: BSPNode = right_rooms[_rng.randi() % right_rooms.size()]
+			_create_corridor(left.rect, right.rect)
+
+	_connect_siblings(node.left)
+	_connect_siblings(node.right)
+
+
+func _create_corridor(rect1: Rect2i, rect2: Rect2i) -> void:
+	var center1 := Vector2i(rect1.position.x + rect1.size.x / 2, rect1.position.y + rect1.size.y / 2)
+	var center2 := Vector2i(rect2.position.x + rect2.size.x / 2, rect2.position.y + rect2.size.y / 2)
+	var corridor_data := {
+		"start": center1,
+		"end": center2,
+		"width": 2
+	}
+	level_grid["corridor_%d" % rooms.size()] = corridor_data
+
+
+# BSP节点类
+class BSPNode:
+	var rect: Rect2i
+	var left: BSPNode = null
+	var right: BSPNode = null
+
+	func _init(p_rect: Rect2i) -> void:
+		rect = p_rect
 
 
 func _generate_cellular_layout() -> void:
 	"""
 	使用元胞自动机生成布局
 	"""
-	# TODO: 实现元胞自动机算法
-	_generate_random_layout()
+	var map_width := 50
+	var map_height := 50
+	var fill_prob := 0.45
+	var iterations := 5
+
+	var grid := []
+	for y in range(map_height):
+		var row := []
+		for x in range(map_width):
+			row.append(1 if _rng.randf() < fill_prob else 0)
+		grid.append(row)
+
+	for _i in range(iterations):
+		grid = _cellular_step(grid, map_width, map_height)
+
+	_create_rooms_from_cellular_grid(grid, map_width, map_height)
+
+
+func _cellular_step(grid: Array, width: int, height: int) -> Array:
+	var new_grid := []
+	for y in range(height):
+		var row := []
+		for x in range(width):
+			var walls := _count_adjacent_walls(grid, x, y, width, height)
+			if walls > 4:
+				row.append(1)
+			else:
+				row.append(0)
+		new_grid.append(row)
+	return new_grid
+
+
+func _count_adjacent_walls(grid: Array, x: int, y: int, width: int, height: int) -> int:
+	var count := 0
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if dx == 0 and dy == 0:
+				continue
+			var nx := x + dx
+			var ny := y + dy
+			if nx < 0 or nx >= width or ny < 0 or ny >= height:
+				count += 1
+			elif grid[ny][nx] == 1:
+				count += 1
+	return count
+
+
+func _create_rooms_from_cellular_grid(grid: Array, width: int, height: int) -> void:
+	var visited := []
+	for y in range(height):
+		var row := []
+		for x in range(width):
+			row.append(false)
+		visited.append(row)
+
+	var room_index := 0
+	for y in range(height):
+		for x in range(width):
+			if grid[y][x] == 0 and not visited[y][x]:
+				var region := _flood_fill(grid, visited, x, y, width, height)
+				if region.size() >= 20:
+					_create_room_from_region(region, room_index)
+					room_index += 1
+
+
+func _flood_fill(grid: Array, visited: Array, start_x: int, start_y: int, width: int, height: int) -> Array:
+	var region := []
+	var stack := [Vector2i(start_x, start_y)]
+
+	while not stack.is_empty():
+		var pos: Vector2i = stack.pop_back()
+		var x := pos.x
+		var y := pos.y
+
+		if x < 0 or x >= width or y < 0 or y >= height:
+			continue
+		if visited[y][x] or grid[y][x] == 1:
+			continue
+
+		visited[y][x] = true
+		region.append(pos)
+
+		stack.append(Vector2i(x + 1, y))
+		stack.append(Vector2i(x - 1, y))
+		stack.append(Vector2i(x, y + 1))
+		stack.append(Vector2i(x, y - 1))
+
+	return region
+
+
+func _create_room_from_region(region: Array, room_index: int) -> void:
+	if region.is_empty():
+		return
+
+	var min_x := 999
+	var min_y := 999
+	var max_x := 0
+	var max_y := 0
+
+	for pos in region:
+		min_x = mini(min_x, pos.x)
+		min_y = mini(min_y, pos.y)
+		max_x = maxi(max_x, pos.x)
+		max_y = maxi(max_y, pos.y)
+
+	var room_type: RoomType = RoomType.STANDARD
+	if room_index == 0:
+		room_type = RoomType.START
+	elif _rng.randf() < 0.1:
+		room_type = RoomType.ELITE
+
+	var room_data: Dictionary = {
+		"index": room_index,
+		"type": room_type,
+		"size": Vector2i(max_x - min_x + 1, max_y - min_y + 1),
+		"position": Vector2i(min_x, min_y),
+		"world_rect": Rect2(Vector2(min_x * TILE_SIZE), Vector2((max_x - min_x + 1) * TILE_SIZE, (max_y - min_y + 1) * TILE_SIZE)),
+		"enemy_count": _rng.randi_range(2, 5),
+		"item_count": _rng.randi_range(1, 3),
+		"is_cleared": room_type == RoomType.START
+	}
+
+	rooms.append(room_data)
+	room_generated.emit(room_index, room_data)
 
 
 func _generate_predefined_layout() -> void:
 	"""
 	使用预定义布局
 	"""
-	# TODO: 加载预定义的关卡布局
 	_generate_random_layout()
 
 

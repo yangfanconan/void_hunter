@@ -235,3 +235,41 @@ func _get_default_settings() -> Dictionary:
 			"best_wave": 0,
 		},
 	}
+
+
+# =============================================================================
+# 公共方法 - 永久成长存档
+# =============================================================================
+
+const GROWTH_PATH := "user://growth_data.dat"
+
+## 保存永久成长数据
+func save_growth_data(data: Dictionary) -> bool:
+	var file := FileAccess.open(GROWTH_PATH, FileAccess.WRITE)
+	if file == null:
+		push_error("[SaveManager] 无法保存成长数据")
+		return false
+	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+	print("[SaveManager] 成长数据已保存")
+	return true
+
+
+## 加载永久成长数据
+func load_growth_data() -> Dictionary:
+	if not FileAccess.file_exists(GROWTH_PATH):
+		return {}
+
+	var file := FileAccess.open(GROWTH_PATH, FileAccess.READ)
+	if file == null:
+		push_error("[SaveManager] 无法读取成长数据")
+		return {}
+
+	var json_string := file.get_as_text()
+	file.close()
+
+	var json := JSON.new()
+	if json.parse(json_string) == OK:
+		return json.data
+
+	return {}

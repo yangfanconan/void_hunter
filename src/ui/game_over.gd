@@ -24,7 +24,7 @@ signal main_menu_pressed()
 @onready var overlay: ColorRect = $Overlay
 
 ## 主面板
-@onready var panel: Panel = $PanelContainer
+@onready var panel: PanelContainer = $PanelContainer
 
 ## 标题区域
 @onready var title_label: Label = $PanelContainer/VBoxContainer/TitleContainer/TitleLabel
@@ -372,9 +372,15 @@ func _on_restart_pressed() -> void:
 	AudioManager.play_sfx("button_click")
 	hide_game_over()
 	restart_pressed.emit()
-	
-	# 开始新游戏
-	GameManager.start_new_game()
+
+	# 获取游戏场景并重新开始
+	var game = get_tree().current_scene
+	if game and game.has_method("start_new_game"):
+		game.start_new_game()
+	else:
+		# 后备：重新加载当前场景
+		get_tree().paused = false
+		get_tree().reload_current_scene()
 
 
 func _on_main_menu_pressed() -> void:
@@ -384,6 +390,12 @@ func _on_main_menu_pressed() -> void:
 	AudioManager.play_sfx("button_click")
 	hide_game_over()
 	main_menu_pressed.emit()
-	
-	# 返回主菜单
-	GameManager.return_to_main_menu()
+
+	# 获取游戏场景并返回主菜单
+	var game = get_tree().current_scene
+	if game and game.has_method("return_to_main_menu"):
+		game.return_to_main_menu()
+	else:
+		# 后备：重新加载场景
+		get_tree().paused = false
+		get_tree().reload_current_scene()

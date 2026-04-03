@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=6 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="2_hud"]
 [ext_resource type="Script" path="res://src/ui/main_menu.gd" id="3_main_menu"]
 [ext_resource type="Script" path="res://src/ui/mobile_controls.gd" id="4_mobile"]
+[ext_resource type="Script" path="res://src/ui/game_over.gd" id="5_game_over"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_game")
@@ -63,6 +64,135 @@ text = "设置"
 [node name="ButtonQuit" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
 layout_mode = 2
 text = "退出"
+
+[node name="GameOver" type="Control" parent="CanvasLayer"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_game_over")
+
+[node name="Overlay" type="ColorRect" parent="CanvasLayer/GameOver"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/GameOver"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/GameOver/PanelContainer"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="TitleContainer" type="VBoxContainer" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/TitleContainer"]
+layout_mode = 2
+text = "游戏结束"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/TitleContainer"]
+layout_mode = 2
+text = "再接再厉！"
+horizontal_alignment = 1
+
+[node name="StatsContainer" type="GridContainer" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/h_separation = 30
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="TimeLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "存活时间:"
+
+[node name="TimeValue" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "00:00"
+
+[node name="WaveLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "到达波次:"
+
+[node name="WaveValue" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "1"
+
+[node name="KillsLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "击杀数:"
+
+[node name="KillsValue" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "0"
+
+[node name="ExpLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "获得经验:"
+
+[node name="ExpValue" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "0"
+
+[node name="ItemsLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "收集道具:"
+
+[node name="ItemsValue" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "0"
+
+[node name="DamageLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "总伤害:"
+
+[node name="DamageValue" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "0"
+
+[node name="NewRecordContainer" type="HBoxContainer" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+alignment = 1
+
+[node name="NewRecordLabel" type="Label" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/NewRecordContainer"]
+layout_mode = 2
+text = "★ 新纪录！★"
+horizontal_alignment = 1
+
+[node name="ButtonContainer" type="HBoxContainer" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="ButtonRestart" type="Button" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/ButtonContainer"]
+layout_mode = 2
+text = "重新开始"
+
+[node name="ButtonMainMenu" type="Button" parent="CanvasLayer/GameOver/PanelContainer/VBoxContainer/ButtonContainer"]
+layout_mode = 2
+text = "返回主菜单"
 
 [node name="GameWorld" type="Node2D" parent="."]
 visible = false

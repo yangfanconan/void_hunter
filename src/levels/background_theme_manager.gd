@@ -22,10 +22,13 @@ signal transition_completed()
 ## 背景主题类型
 enum ThemeType {
 	DUNGEON,		## 废弃地牢 (波次 1-5)
-	LAVA_CAVE,		## 熔岩洞穴 (波次 6-10)
-	ICE_FORTRESS,	## 冰霜要塞 (波次 11-15)
-	CORRUPTED_ABYSS,## 腐化深渊 (波次 16-20)
-	VOID_REALM		## 虚空领域 (波次 21+)
+	SNOWLAND,		## 雪地荒原 (波次 6-10)
+	LAVA_CAVE,		## 熔岩洞穴 (波次 11-15)
+	GRAVEYARD,		## 幽暗墓地 (波次 16-20)
+	ICE_FORTRESS,	## 冰霜要塞 (波次 21-25)
+	MECHANICAL_CITY,## 机械城 (波次 26-30)
+	CORRUPTED_ABYSS,## 腐化深渊 (波次 31-35)
+	VOID_REALM		## 虚空领域 (波次 36+)
 }
 
 # =============================================================================
@@ -41,43 +44,86 @@ const THEME_CONFIG: Dictionary = {
 		"grid_color": Color(0.18, 0.18, 0.22, 0.5),
 		"accent_color": Color(0.3, 0.3, 0.35),
 		"particle_color": Color(0.4, 0.4, 0.45),
-		"ambient_light": Color(0.8, 0.8, 0.85, 0.3)
+		"ambient_light": Color(0.8, 0.8, 0.85, 0.3),
+		"weather": "none",
+		"boss": "dungeon_lord"
+	},
+	ThemeType.SNOWLAND: {
+		"name": "雪地荒原",
+		"wave_range": [6, 10],
+		"bg_color": Color(0.9, 0.92, 0.95),
+		"grid_color": Color(0.7, 0.75, 0.8, 0.4),
+		"accent_color": Color(0.5, 0.6, 0.8),
+		"particle_color": Color(1.0, 1.0, 1.0),
+		"ambient_light": Color(0.8, 0.85, 0.95, 0.3),
+		"weather": "snow",
+		"boss": "frost_queen"
 	},
 	ThemeType.LAVA_CAVE: {
 		"name": "熔岩洞穴",
-		"wave_range": [6, 10],
+		"wave_range": [11, 15],
 		"bg_color": Color(0.15, 0.08, 0.06),
 		"grid_color": Color(0.25, 0.12, 0.08, 0.5),
 		"accent_color": Color(0.8, 0.3, 0.1),
 		"particle_color": Color(1.0, 0.5, 0.2),
-		"ambient_light": Color(1.0, 0.6, 0.3, 0.4)
+		"ambient_light": Color(1.0, 0.6, 0.3, 0.4),
+		"weather": "heat",
+		"boss": "flame_emperor"
+	},
+	ThemeType.GRAVEYARD: {
+		"name": "幽暗墓地",
+		"wave_range": [16, 20],
+		"bg_color": Color(0.08, 0.08, 0.1),
+		"grid_color": Color(0.15, 0.15, 0.2, 0.5),
+		"accent_color": Color(0.3, 0.4, 0.3),
+		"particle_color": Color(0.5, 0.6, 0.4),
+		"ambient_light": Color(0.4, 0.5, 0.4, 0.3),
+		"weather": "fog",
+		"boss": "dungeon_lord"
 	},
 	ThemeType.ICE_FORTRESS: {
 		"name": "冰霜要塞",
-		"wave_range": [11, 15],
+		"wave_range": [21, 25],
 		"bg_color": Color(0.08, 0.12, 0.18),
 		"grid_color": Color(0.15, 0.2, 0.3, 0.5),
 		"accent_color": Color(0.4, 0.7, 1.0),
 		"particle_color": Color(0.7, 0.9, 1.0),
-		"ambient_light": Color(0.6, 0.8, 1.0, 0.3)
+		"ambient_light": Color(0.6, 0.8, 1.0, 0.3),
+		"weather": "blizzard",
+		"boss": "frost_queen"
+	},
+	ThemeType.MECHANICAL_CITY: {
+		"name": "机械城",
+		"wave_range": [26, 30],
+		"bg_color": Color(0.12, 0.12, 0.1),
+		"grid_color": Color(0.25, 0.25, 0.2, 0.5),
+		"accent_color": Color(0.9, 0.7, 0.2),
+		"particle_color": Color(1.0, 0.9, 0.5),
+		"ambient_light": Color(1.0, 0.9, 0.5, 0.25),
+		"weather": "none",
+		"boss": "mechanical_overlord"
 	},
 	ThemeType.CORRUPTED_ABYSS: {
 		"name": "腐化深渊",
-		"wave_range": [16, 20],
+		"wave_range": [31, 35],
 		"bg_color": Color(0.1, 0.06, 0.14),
 		"grid_color": Color(0.2, 0.1, 0.25, 0.5),
 		"accent_color": Color(0.6, 0.2, 0.8),
 		"particle_color": Color(0.8, 0.4, 1.0),
-		"ambient_light": Color(0.7, 0.3, 0.9, 0.35)
+		"ambient_light": Color(0.7, 0.3, 0.9, 0.35),
+		"weather": "void",
+		"boss": "void_entity"
 	},
 	ThemeType.VOID_REALM: {
 		"name": "虚空领域",
-		"wave_range": [21, 999],
+		"wave_range": [36, 999],
 		"bg_color": Color(0.05, 0.05, 0.08),
 		"grid_color": Color(0.15, 0.1, 0.2, 0.4),
 		"accent_color": Color(0.5, 0.3, 0.8),
 		"particle_color": Color(0.6, 0.4, 1.0),
-		"ambient_light": Color(0.5, 0.4, 0.8, 0.4)
+		"ambient_light": Color(0.5, 0.4, 0.8, 0.4),
+		"weather": "rainbow",
+		"boss": "void_entity"
 	}
 }
 

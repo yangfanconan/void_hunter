@@ -153,8 +153,9 @@ func _ensure_visual() -> void:
 		print("[Player] 移除旧 Sprite2D")
 	
 	# 尝试从 AnimationManager 加载动画
-	if AnimationManager:
-		var sf: Variant = AnimationManager.get_entity_sprite_frames("player")
+	var anim_mgr := _get_animation_manager()
+	if anim_mgr:
+		var sf: Variant = anim_mgr.get_entity_sprite_frames("player")
 		if sf:
 			_anim_sprite = AnimatedSprite2D.new()
 			_anim_sprite.name = "PlayerAnim"
@@ -165,7 +166,7 @@ func _ensure_visual() -> void:
 			add_child(_anim_sprite)
 			print("[Player] 动画精灵加载成功")
 			return
-	
+
 	# 后备：使用色块
 	var sprite := Sprite2D.new()
 	var texture := ImageTexture.new()
@@ -193,6 +194,13 @@ func _find_projectiles_container() -> void:
 	var main := get_tree().current_scene
 	if main:
 		_projectiles_container = main.get_node_or_null("GameWorld/Projectiles")
+
+
+func _get_animation_manager() -> Node:
+	"""安全获取AnimationManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("AnimationManager")
+	return null
 
 func _update_timers(delta: float) -> void:
 	if _dash_cooldown_timer > 0:
@@ -884,10 +892,10 @@ func unlock_skill(skill_id: String) -> bool:
 		if skill_manager and skill_manager.has_method("upgrade_skill"):
 			return skill_manager.upgrade_skill(skill_id)
 		return false
-	
+
 	# 添加到已解锁列表
 	unlocked_skills.append(skill_id)
-	
+
 	# 通过技能管理器获取技能
 	if skill_manager and skill_manager.has_method("acquire_skill"):
 		var success = skill_manager.acquire_skill(skill_id)
@@ -898,11 +906,17 @@ func unlock_skill(skill_id: String) -> bool:
 			skills_changed.emit()
 			print("[Player] 技能解锁成功: %s" % skill_id)
 		return success
-	
+
 	print("[Player] 技能解锁成功（无管理器）: %s" % skill_id)
 	skill_unlocked.emit(skill_id)
 	skills_changed.emit()
 	return true
+
+
+## 别名方法，供game.gd调用
+func learn_skill(skill_id: String) -> bool:
+	"""unlock_skill的别名"""
+	return unlock_skill(skill_id)
 
 
 ## 自动分配技能到快捷键槽位
@@ -949,12 +963,18 @@ func use_skill_slot(slot: int) -> bool:
 	"""
 	if slot < 0 or slot >= skill_hotkeys.size():
 		return false
-	
+
 	var skill_id := skill_hotkeys[slot]
 	if skill_id.is_empty():
 		return false
-	
+
 	return use_skill(skill_id)
+
+
+## 别名方法，供game.gd调用
+func use_skill_at_slot(slot: int) -> bool:
+	"""use_skill_slot的别名"""
+	return use_skill_slot(slot)
 
 
 ## 检查技能是否已解锁

@@ -520,6 +520,50 @@ func _register_all_sets() -> void:
 		{"max_health_percent": 0.15, "defense_percent": 0.10},
 		{"max_health_percent": 0.25, "damage_reduction": 0.10})
 
+	# === 新增套装 ===
+
+	# --- 烈焰套装 ---
+	_register_set("inferno_set", "烈焰战神", "火焰之力增幅",
+		["weapon_inferno_blade", "armor_dragon_scale", "material_essence_fire"],
+		{"attack_percent": 0.15, "crit_damage": 0.2},
+		{"attack_percent": 0.25, "burn_damage": 5.0})
+
+	# --- 冰霜套装 ---
+	_register_set("frost_set", "冰霜领主", "冰霜之力增幅",
+		["weapon_frost_scythe", "material_essence_ice"],
+		{"attack_percent": 0.12, "cooldown_reduction": 0.08},
+		{"freeze_chance": 0.2, "slow_power": 0.3})
+
+	# --- 雷霆套装 ---
+	_register_set("thunder_set", "雷霆霸主", "闪电之力增幅",
+		["weapon_thunder_hammer", "accessory_gem_of_wisdom"],
+		{"attack_percent": 0.18, "chain_lightning": 1},
+		{"attack_percent": 0.30, "chain_lightning": 2})
+
+	# --- 虚空套装 ---
+	_register_set("void_set", "虚空行者", "虚空之力增幅",
+		["weapon_void_blade", "armor_void_cloak", "special_chaos_orb"],
+		{"attack_percent": 0.10, "dodge_chance": 0.1},
+		{"attack_percent": 0.20, "dodge_chance": 0.2, "void_damage": 10.0})
+
+	# --- 时间套装 ---
+	_register_set("time_set", "时间主宰", "掌控时间",
+		["accessory_time_loop", "accessory_hourglass_of_time"],
+		{"cooldown_reduction": 0.15, "speed_percent": 0.1},
+		{"cooldown_reduction": 0.25, "revive_chance": 0.3})
+
+	# --- 黄金套装 ---
+	_register_set("golden_set", "黄金帝王", "财富与力量",
+		["special_golden_crown", "accessory_lucky_charm"],
+		{"gold_bonus": 0.3, "exp_bonus": 0.2},
+		{"gold_bonus": 0.5, "exp_bonus": 0.4, "luck": 0.2})
+
+	# --- 贤者套装 ---
+	_register_set("sage_set", "大贤者", "全面属性提升",
+		["accessory_philosopher_stone", "accessory_gem_of_wisdom", "consumable_elixir"],
+		{"all_stats": 0.1, "cooldown_reduction": 0.1},
+		{"all_stats": 0.2, "cooldown_reduction": 0.2, "mana_regen": 5.0})
+
 func _register_set(id: String, name: String, desc: String, items: Array[String], b2: Dictionary, b3: Dictionary = {}) -> void:
 	"""注册一个套装"""
 	var s := ItemSet.new(id, name, desc)

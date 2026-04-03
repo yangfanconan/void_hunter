@@ -70,9 +70,17 @@ var _skill_buttons: Array[Button] = []
 ## 当前技能信息缓存
 var _current_skills: Array[Dictionary] = []
 
+## 连击显示节点
+var _combo_label: Label = null
+var _combo_timer_bar: ProgressBar = null
+var _combo_count: int = 0
+var _kill_streak: int = 0
+
 func _ready() -> void:
 	# 初始化属性加成显示节点（如果存在）
 	_init_stats_panel()
+	# 创建连击显示
+	_create_combo_display()
 	_update_display()
 
 func _process(delta: float) -> void:
@@ -538,3 +546,121 @@ func _update_skill_cooldowns() -> void:
 			cooldown_progress = skill.get_cooldown_progress()
 		
 		update_skill_cooldown(i, cooldown_progress, is_on_cooldown)
+
+	# =============================================================================
+	# 连击显示方法
+	# =============================================================================
+
+	func _create_combo_display() -> void:
+		"""创建连击显示UI"""
+		# 创建连击标签
+		_combo_label = Label.new()
+		_combo_label.name = "ComboLabel"
+		_combo_label.text = ""
+		_combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_combo_label.add_theme_font_size_override("font_size", 32)
+		_combo_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+		_combo_label.add_theme_color_override("font_outline_color", Color(0.2, 0.1, 0.0))
+		_combo_label.add_theme_constant_override("outline_size", 3)
+
+		# 设置位置（屏幕顶部中央）
+		_combo_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_combo_label.offset_top = 80
+		_combo_label.offset_left = -100
+		_combo_label.offset_right = 100
+
+		add_child(_combo_label)
+
+		# 创建连击计时器条
+		_combo_timer_bar = ProgressBar.new()
+		_combo_timer_bar.name = "ComboTimerBar"
+		_combo_timer_bar.custom_minimum_size = Vector2(150, 6)
+		_combo_timer_bar.value = 0
+		_combo_timer_bar.max_value = 100
+
+		# 设置位置
+		_combo_timer_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_combo_timer_bar.offset_top = 120
+		_combo_timer_bar.offset_left = -75
+		_combo_timer_bar.offset_right = 75
+
+		add_child(_combo_timer_bar)
+
+
+	func update_combo(combo_count: int, kill_streak: int = 0) -> void:
+		"""更新连击显示"""
+		_combo_count = combo_count
+		_kill_streak = kill_streak
+
+		if _combo_label == null:
+			return
+
+		if combo_count > 0:
+			var text: String = "%d COMBO" % combo_count
+			if kill_streak > 3:
+				text += " | 连杀 x%d" % kill_streak
+
+			_combo_label.text = text
+
+			# 根据连击数改变颜色和大小
+			if combo_count >= 50:
+				_combo_label.add_theme_font_size_override("font_size", 48)
+				_combo_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+			elif combo_count >= 30:
+				_combo_label.add_theme_font_size_override("font_size", 40)
+				_combo_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.2))
+			elif combo_count >= 10:
+				_combo_label.add_theme_font_size_override("font_size", 36)
+				_combo_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+			else:
+				_combo_label.add_theme_font_size_override("font_size", 32)
+				_combo_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+
+			# 播放缩放动画
+			_play_combo_animation()
+		else:
+			_combo_label.text = ""
+
+
+	func update_combo_timer(remaining: float, max_time: float) -> void:
+		"""更新连击计时器"""
+		if _combo_timer_bar == null:
+			return
+
+		if max_time > 0 and remaining > 0:
+			_combo_timer_bar.value = (remaining / max_time) * 100
+			_combo_timer_bar.visible = true
+		else:
+			_combo_timer_bar.visible = false
+
+
+	func show_rage_mode(active: bool) -> void:
+		"""显示暴走模式"""
+		if _combo_label == null:
+			return
+
+		if active:
+			_combo_label.text = "★ RAGE MODE ★"
+			_combo_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.5))
+			_play_rage_animation()
+
+
+	func _play_combo_animation() -> void:
+		"""播放连击动画"""
+		if _combo_label == null:
+			return
+
+		var tween := create_tween()
+		_combo_label.scale = Vector2(1.3, 1.3)
+		tween.tween_property(_combo_label, "scale", Vector2.ONE, 0.15)
+
+
+	func _play_rage_animation() -> void:
+		"""播放暴走动画"""
+		if _combo_label == null:
+			return
+
+		var tween := create_tween()
+		tween.set_loops()
+		tween.tween_property(_combo_label, "modulate", Color(1.5, 0.5, 0.8), 0.3)
+		tween.tween_property(_combo_label, "modulate", Color(1.0, 1.0, 1.0), 0.3)

@@ -139,6 +139,7 @@ func _process(delta: float) -> void:
 	"""每帧更新"""
 	if current_state == GameState.PLAYING:
 		game_time += delta
+		_update_combo_display()
 
 
 func _input(event: InputEvent) -> void:
@@ -270,7 +271,10 @@ func _setup_signals() -> void:
 func _setup_level_background() -> void:
 	"""设置关卡背景（简单的地板）"""
 	# 尝试使用AI生成的主题背景
-	var theme_tex: ImageTexture = SpriteManager.get_theme_background(0)
+	var sprite_mgr = _get_sprite_manager()
+	var theme_tex: ImageTexture = null
+	if sprite_mgr:
+		theme_tex = sprite_mgr.get_theme_background(0)
 	if theme_tex:
 		var bg_sprite := TextureRect.new()
 		bg_sprite.name = "FloorBackground"
@@ -404,6 +408,12 @@ func _spawn_player() -> void:
 	print("[Game] 玩家已生成于: ", player.global_position)
 
 
+func _get_sprite_manager() -> Node:
+	"""安全获取精灵管理器"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("SpriteManager")
+	return null
+
 func _create_player_instance() -> CharacterBody2D:
 	"""动态创建玩家实例"""
 	var player_node := CharacterBody2D.new()
@@ -424,7 +434,10 @@ func _create_player_instance() -> CharacterBody2D:
 	
 	# 添加视觉表现 - 使用精灵管理器加载AI生成的美术素材
 	var sprite := Sprite2D.new()
-	var player_tex: ImageTexture = SpriteManager.get_player_frame(0)
+	var sprite_mgr = _get_sprite_manager()
+	var player_tex: ImageTexture = null
+	if sprite_mgr:
+		player_tex = sprite_mgr.get_player_frame(0)
 	if player_tex:
 		sprite.texture = player_tex
 	else:
@@ -520,10 +533,61 @@ func _setup_system_integrator() -> void:
 		system_integrator.set_script(integrator_script)
 		system_integrator.name = "GameSystemIntegrator"
 		_game_world.add_child(system_integrator)
-		
+
 		# 设置玩家引用
 		system_integrator.setup_player(player)
+
+		# 连接连击系统信号到HUD
+		_connect_combo_signals()
+
 		print("[Game] V2系统集成器已初始化")
+
+
+func _connect_combo_signals() -> void:
+	"""连接连击系统信号"""
+	if system_integrator and system_integrator.combo_system:
+		var combo = system_integrator.combo_system
+		# 连接暴走模式信号
+		if combo.has_signal("rage_mode_activated"):
+			combo.rage_mode_activated.connect(_on_rage_mode_activated)
+		if combo.has_signal("rage_mode_deactivated"):
+			combo.rage_mode_deactivated.connect(_on_rage_mode_deactivated)
+
+
+func _on_rage_mode_activated(_duration: float) -> void:
+	"""暴走模式激活"""
+	if _hud and _hud.has_method("show_rage_mode"):
+		_hud.show_rage_mode(true)
+
+
+func _on_rage_mode_deactivated() -> void:
+	"""暴走模式结束"""
+	if _hud and _hud.has_method("show_rage_mode"):
+		_hud.show_rage_mode(false)
+
+
+func _update_combo_display() -> void:
+	"""更新连击显示"""
+	if system_integrator == null or _hud == null:
+		return
+
+	if not _hud.has_method("update_combo") or not _hud.has_method("update_combo_timer"):
+		return
+
+	# 获取连击数据
+	var combo_count: int = system_integrator.get_combo_count()
+	var kill_streak: int = system_integrator.get_kill_streak()
+	var combo_timer: float = system_integrator.get_combo_timer()
+
+	# 更新HUD显示
+	_hud.update_combo(combo_count, kill_streak)
+
+	# 连击计时器（假设基础连击时间为3秒）
+	const BASE_COMBO_TIME: float = 3.0
+	if combo_timer > 0:
+		_hud.update_combo_timer(combo_timer, BASE_COMBO_TIME)
+	else:
+		_hud.update_combo_timer(0, BASE_COMBO_TIME)
 
 func _cleanup_game() -> void:
 	"""清理游戏状态"""
@@ -581,6 +645,12 @@ func _show_game_over() -> void:
 	print("[Game] 存活时间: %.1f 秒" % game_time)
 	print("[Game] 总击杀: %d" % total_kills)
 
+	# 停止波次管理器
+	if wave_manager:
+		if wave_manager.has_method("pause_wave"):
+			wave_manager.pause_wave()
+		wave_manager.set_physics_process(false)
+
 	# 暂停游戏逻辑（但不暂停UI动画）
 	get_tree().paused = true
 
@@ -593,12 +663,16 @@ func _show_game_over() -> void:
 	if _game_over_screen:
 		# 使用已有的 GameOver UI
 		_game_over_screen.process_mode = Node.PROCESS_MODE_ALWAYS
-		_game_over_screen.show_game_over(false, stats)
-		# 连接游戏结束信号
-		if _game_over_screen.has_signal("restart_pressed") and not _game_over_screen.restart_pressed.is_connected(_on_game_over_restart):
+		# 断开之前的连接（避免重复）
+		if _game_over_screen.has_signal("restart_pressed"):
+			if _game_over_screen.restart_pressed.is_connected(_on_game_over_restart):
+				_game_over_screen.restart_pressed.disconnect(_on_game_over_restart)
 			_game_over_screen.restart_pressed.connect(_on_game_over_restart)
-		if _game_over_screen.has_signal("main_menu_pressed") and not _game_over_screen.main_menu_pressed.is_connected(_on_game_over_main_menu):
+		if _game_over_screen.has_signal("main_menu_pressed"):
+			if _game_over_screen.main_menu_pressed.is_connected(_on_game_over_main_menu):
+				_game_over_screen.main_menu_pressed.disconnect(_on_game_over_main_menu)
 			_game_over_screen.main_menu_pressed.connect(_on_game_over_main_menu)
+		_game_over_screen.show_game_over(false, stats)
 	else:
 		# 后备：动态创建简易游戏结束界面
 		_create_fallback_game_over(stats)
@@ -619,18 +693,34 @@ func _collect_game_stats() -> Dictionary:
 		stats["level_reached"] = wave_manager.current_wave
 
 	# 从GameManager获取额外数据
-	if GameManager:
-		stats["total_experience"] = GameManager.total_experience if "total_experience" in GameManager else 0
+	var gm = _get_game_manager()
+	if gm:
+		stats["total_experience"] = gm.total_experience if "total_experience" in gm else 0
 
 	return stats
 
 
+func _get_game_manager() -> Node:
+	"""安全获取GameManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("GameManager")
+	return null
+
+
+func _get_save_manager() -> Node:
+	"""安全获取SaveManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("SaveManager")
+	return null
+
+
 func _save_records(stats: Dictionary) -> void:
 	"""保存游戏纪录"""
-	if not SaveManager:
+	var sm = _get_save_manager()
+	if not sm:
 		return
 
-	var settings: Dictionary = SaveManager.load_settings()
+	var settings: Dictionary = sm.load_settings()
 	var records: Dictionary = settings.get("records", {})
 	var updated := false
 
@@ -646,7 +736,7 @@ func _save_records(stats: Dictionary) -> void:
 
 	if updated:
 		settings["records"] = records
-		SaveManager.save_settings(settings)
+		sm.save_settings(settings)
 		print("[Game] 新纪录已保存!")
 
 
@@ -739,21 +829,47 @@ func _create_fallback_game_over(stats: Dictionary) -> void:
 
 func _on_game_over_restart() -> void:
 	"""游戏结束界面重新开始"""
+	print("[Game] 重新开始游戏...")
+
+	# 取消暂停
 	get_tree().paused = false
+
+	# 清理后备游戏结束界面
 	var fallback = get_node_or_null("CanvasLayer/FallbackGameOver")
 	if fallback:
 		fallback.queue_free()
+
+	# 隐藏游戏结束界面
+	if _game_over_screen:
+		_game_over_screen.hide()
+
+	# 清理游戏状态
 	_cleanup_game()
+
+	# 重新开始游戏
 	_start_game()
 
 
 func _on_game_over_main_menu() -> void:
 	"""游戏结束界面返回主菜单"""
+	print("[Game] 返回主菜单...")
+
+	# 取消暂停
 	get_tree().paused = false
+
+	# 清理后备游戏结束界面
 	var fallback = get_node_or_null("CanvasLayer/FallbackGameOver")
 	if fallback:
 		fallback.queue_free()
+
+	# 隐藏游戏结束界面
+	if _game_over_screen:
+		_game_over_screen.hide()
+
+	# 清理游戏状态
 	_cleanup_game()
+
+	# 返回主菜单
 	_show_main_menu()
 
 
@@ -789,8 +905,9 @@ func _on_new_game_pressed() -> void:
 
 func _on_continue_pressed() -> void:
 	"""继续游戏按钮点击"""
-	if SaveManager and SaveManager.has_save():
-		SaveManager.load_game()
+	var sm = _get_save_manager()
+	if sm and sm.has_save():
+		sm.load_game()
 	_start_game()
 
 
@@ -938,8 +1055,10 @@ func _on_player_leveled_up(new_level: int) -> void:
 func _on_wave_started(wave_number: int) -> void:
 	"""波次开始回调"""
 	print("[Game] 第 %d 波开始" % wave_number)
-	GameManager.set_wave(wave_number)
-	
+	var gm = _get_game_manager()
+	if gm:
+		gm.set_wave(wave_number)
+
 	# V2: 设置波次主题
 	if system_integrator:
 		system_integrator.setup_wave_theme(wave_number)
@@ -961,8 +1080,10 @@ func _on_enemy_spawned(enemy: Node) -> void:
 func _on_enemy_died(killer: Node, enemy: Node) -> void:
 	"""敌人死亡回调"""
 	record_enemy_kill()
-	GameManager.record_enemy_kill()
-	
+	var gm = _get_game_manager()
+	if gm:
+		gm.record_enemy_kill()
+
 	# V2: 通知连击系统
 	if system_integrator:
 		system_integrator.on_enemy_killed(enemy)
