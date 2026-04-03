@@ -205,7 +205,24 @@ func handle_player_death() -> void:
 	"""处理玩家死亡"""
 	current_state = GameState.GAME_OVER
 	player_died.emit()
-	
+
+	# 结束成就系统会话并提交记录
+	if AchievementManager:
+		AchievementManager.record_survival_time(game_time)
+		AchievementManager.end_session()
+
+	# 提交排行榜记录
+	if LeaderboardManager:
+		var player_name: String = "玩家"  # 可以从设置中获取
+		var stats := {
+			"game_time": game_time,
+			"enemies_killed": total_kills,
+			"level_reached": wave_manager.current_wave if wave_manager else 1,
+			"damage_dealt": _total_damage_dealt,
+			"items_collected": _items_collected,
+		}
+		LeaderboardManager.submit_game_record(player_name, stats)
+
 	# 显示游戏结束界面
 	_show_game_over()
 
@@ -344,13 +361,13 @@ func _show_main_menu() -> void:
 func _start_game() -> void:
 	"""开始游戏"""
 	print("[Game] 开始游戏...")
-	
+
 	# 隐藏主菜单
 	_main_menu.visible = false
 	_game_world.visible = true
 	_hud.visible = true
 	_pause_menu.visible = false
-	
+
 	# 重置游戏状态
 	game_time = 0.0
 	total_kills = 0
@@ -360,6 +377,10 @@ func _start_game() -> void:
 	# 隐藏游戏结束界面（如果存在）
 	if _game_over_screen:
 		_game_over_screen.hide()
+
+	# 开始成就系统会话
+	if AchievementManager:
+		AchievementManager.start_session()
 
 	# 创建玩家
 	_spawn_player()
@@ -1069,6 +1090,10 @@ func _on_wave_completed(wave_number: int) -> void:
 	print("[Game] 第 %d 波完成" % wave_number)
 	wave_completed.emit(wave_number)
 
+	# 通知成就系统
+	if AchievementManager:
+		AchievementManager.record_wave(wave_number)
+
 
 func _on_enemy_spawned(enemy: Node) -> void:
 	"""敌人生成回调"""
@@ -1083,6 +1108,18 @@ func _on_enemy_died(killer: Node, enemy: Node) -> void:
 	var gm = _get_game_manager()
 	if gm:
 		gm.record_enemy_kill()
+
+	# 通知成就系统
+	if AchievementManager:
+		var enemy_type: String = "normal"
+		if enemy.has_method("get_enemy_type"):
+			enemy_type = enemy.get_enemy_type()
+		elif "enemy_type" in enemy:
+			var type_value = enemy.enemy_type
+			match type_value:
+				3: enemy_type = "elite"
+				4: enemy_type = "boss"
+		AchievementManager.record_kill(enemy_type)
 
 	# V2: 通知连击系统
 	if system_integrator:

@@ -65,8 +65,12 @@ func _remove_equipment_effects(target: Node) -> void:
 
 func _play_fire_aura(target: Node) -> void:
 	"""播放火焰光环效果"""
-	# TODO: 添加火焰粒子效果
-	pass
+	if VFXManager:
+		# 创建持续火焰光环
+		var aura := VFXManager.create_aura_effect(target, "fire_aura")
+		if aura:
+			aura.name = "FireAura"
+			target.add_child(aura)
 
 
 func get_item_info() -> Dictionary:

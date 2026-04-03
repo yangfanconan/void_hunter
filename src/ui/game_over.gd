@@ -255,7 +255,7 @@ func _check_new_records(stats: Dictionary) -> void:
 	检查是否打破纪录
 	@param stats: 统计数据
 	"""
-	# TODO: 从存档中加载历史最高纪录进行比较
+	# 从存档中加载历史最高纪录进行比较
 	var has_new_record: bool = false
 	
 	# 检查生存时间纪录

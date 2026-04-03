@@ -21,6 +21,10 @@ const VFX_DEFS := {
 	"level_up_ring": {"frames": 4, "fps": 8, "lifetime": 0.5, "size": 128},
 	"shield_pulse": {"frames": 6, "fps": 8, "lifetime": 0.75, "size": 64},
 	"poison": {"frames": 6, "fps": 8, "lifetime": 0.75, "size": 32},
+	"void_aura": {"frames": 6, "fps": 10, "lifetime": 1.5, "size": 48},
+	"fire_aura": {"frames": 6, "fps": 12, "lifetime": 1.0, "size": 48},
+	"void_particle": {"frames": 4, "fps": 15, "lifetime": 0.4, "size": 16},
+	"fire_particle": {"frames": 4, "fps": 15, "lifetime": 0.3, "size": 16},
 }
 
 ## 状态效果类型到 VFX ID 的映射
@@ -148,6 +152,35 @@ func spawn_heal_sparkle(pos: Vector2) -> Node2D:
 func spawn_dash_trail(pos: Vector2, flip_h: bool = false) -> Node2D:
 	return spawn_effect("dash_trail", pos, {"flip_h": flip_h, "scale": 0.8})
 
+## 生成虚空光环效果
+func spawn_void_aura(pos: Vector2, scale: float = 1.0) -> Node2D:
+	return spawn_effect("void_aura", pos, {"scale": scale})
+
+## 生成火焰光环效果
+func spawn_fire_aura(pos: Vector2, scale: float = 1.0) -> Node2D:
+	return spawn_effect("fire_aura", pos, {"scale": scale})
+
+## 生成虚空粒子
+func spawn_void_particle(pos: Vector2) -> Node2D:
+	return spawn_effect("void_particle", pos)
+
+## 生成火焰粒子
+func spawn_fire_particle(pos: Vector2) -> Node2D:
+	return spawn_effect("fire_particle", pos)
+
+## 为目标创建持续光环效果
+func create_aura_effect(target: Node, aura_type: String, offset: Vector2 = Vector2.ZERO) -> Node2D:
+	"""为目标创建持续光环效果，跟随目标移动"""
+	var aura_node := Node2D.new()
+	aura_node.name = "Aura_%s" % aura_type
+	aura_node.set_script(preload("res://src/effects/aura_effect.gd"))
+
+	# 设置光环参数
+	if aura_node.has_method("setup"):
+		aura_node.call("setup", target, aura_type, offset)
+
+	return aura_node
+
 ## 清理所有活跃特效
 func clear_all() -> void:
 	for vfx in _active_effects:
@@ -273,6 +306,10 @@ func _get_vfx_colors(effect_id: String) -> Array[Color]:
 			return [Color(0.3, 0.8, 1.0, 0.6), Color(0.1, 0.4, 0.8, 0.3)]
 		"poison":
 			return [Color(0.2, 0.8, 0.0), Color(0.5, 1.0, 0.0)]
+		"void_aura", "void_particle":
+			return [Color(0.5, 0.0, 0.8, 0.8), Color(0.2, 0.0, 0.5, 0.5)]
+		"fire_aura", "fire_particle":
+			return [Color(1.0, 0.4, 0.0, 0.8), Color(1.0, 0.8, 0.0, 0.5)]
 		_:
 			return [Color.WHITE, Color.GRAY]
 

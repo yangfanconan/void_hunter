@@ -65,8 +65,12 @@ func _remove_equipment_effects(target: Node) -> void:
 
 func _play_void_aura(target: Node) -> void:
 	"""播放虚空光环效果"""
-	# TODO: 添加虚空粒子效果
-	pass
+	if VFXManager:
+		# 创建持续虚空光环
+		var aura := VFXManager.create_aura_effect(target, "void_aura")
+		if aura:
+			aura.name = "VoidAura"
+			target.add_child(aura)
 
 
 func get_item_info() -> Dictionary:

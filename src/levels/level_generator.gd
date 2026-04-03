@@ -863,18 +863,275 @@ func _generate_tilemap() -> void:
 	"""
 	生成瓦片地图
 	"""
-	# TODO: 实现瓦片地图生成
-	# 这里应该根据房间数据生成实际的瓦片地图
-	pass
+	# 创建 TileMap 节点（如果不存在）
+	if _tile_map == null:
+		_tile_map = TileMap.new()
+		_tile_map.name = "LevelTileMap"
+		add_child(_tile_map)
+
+	_tile_map.clear()
+
+	# 获取瓦片集（使用默认或主题相关的）
+	var tile_set := _get_tileset_for_theme()
+
+	# 为每个房间生成瓦片
+	for room in rooms:
+		_generate_room_tiles(room, tile_set)
+
+	# 生成走廊瓦片
+	_generate_corridor_tiles(tile_set)
+
+	print("[LevelGenerator] 瓦片地图生成完成，房间数: %d" % rooms.size())
+
+
+func _get_tileset_for_theme() -> TileSet:
+	"""获取主题对应的瓦片集"""
+	# 尝试加载主题瓦片集
+	var tileset_path := "res://assets/tilesets/%s_tileset.tres" % level_theme
+	if ResourceLoader.exists(tileset_path):
+		return load(tileset_path)
+
+	# 创建简单的默认瓦片集
+	return _create_default_tileset()
+
+
+func _create_default_tileset() -> TileSet:
+	"""创建默认的简单瓦片集"""
+	var tile_set := TileSet.new()
+	tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
+
+	# 创建简单的地面纹理
+	var floor_img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	floor_img.fill(Color(0.25, 0.22, 0.2))  # 深灰色地面
+
+	# 添加一些噪点
+	for y in range(TILE_SIZE):
+		for x in range(TILE_SIZE):
+			var noise := (randf() - 0.5) * 0.1
+			var pixel := floor_img.get_pixel(x, y)
+			pixel.r += noise
+			pixel.g += noise
+			pixel.b += noise
+			floor_img.set_pixel(x, y, pixel)
+
+	var floor_tex := ImageTexture.create_from_image(floor_img)
+
+	# 创建地面瓦片
+	tile_set.create_tile(0)
+	tile_set.tile_set_texture(0, floor_tex)
+
+	# 创建墙壁纹理
+	var wall_img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	wall_img.fill(Color(0.15, 0.15, 0.18))  # 深色墙壁
+	var wall_tex := ImageTexture.create_from_image(wall_img)
+
+	tile_set.create_tile(1)
+	tile_set.tile_set_texture(1, wall_tex)
+
+	return tile_set
+
+
+func _generate_room_tiles(room: Dictionary, tile_set: TileSet) -> void:
+	"""为单个房间生成瓦片"""
+	var room_pos: Vector2i = room.get("position", Vector2i.ZERO)
+	var room_size: Vector2i = room.get("size", Vector2i.ONE)
+
+	# 设置瓦片集
+	_tile_map.tile_set = tile_set
+
+	# 生成地面瓦片
+	for x in range(room_size.x):
+		for y in range(room_size.y):
+			var tile_pos := Vector2i(room_pos.x + x, room_pos.y + y)
+			_tile_map.set_cell(0, tile_pos, 0, Vector2i.ZERO)
+
+	# 生成墙壁瓦片（房间边缘）
+	for x in range(room_size.x):
+		# 上边墙
+		_tile_map.set_cell(0, Vector2i(room_pos.x + x, room_pos.y - 1), 1, Vector2i.ZERO)
+		# 下边墙
+		_tile_map.set_cell(0, Vector2i(room_pos.x + x, room_pos.y + room_size.y), 1, Vector2i.ZERO)
+
+	for y in range(room_size.y):
+		# 左边墙
+		_tile_map.set_cell(0, Vector2i(room_pos.x - 1, room_pos.y + y), 1, Vector2i.ZERO)
+		# 右边墙
+		_tile_map.set_cell(0, Vector2i(room_pos.x + room_size.x, room_pos.y + y), 1, Vector2i.ZERO)
+
+
+func _generate_corridor_tiles(tile_set: TileSet) -> void:
+	"""生成走廊瓦片"""
+	for key in level_grid.keys():
+		if not key.begins_with("corridor_"):
+			continue
+
+		var corridor: Dictionary = level_grid[key]
+		var start: Vector2i = corridor.get("start", Vector2i.ZERO)
+		var end: Vector2i = corridor.get("end", Vector2i.ZERO)
+		var width: int = corridor.get("width", 2)
+
+		# 生成L形或直线走廊
+		if absi(end.x - start.x) > absi(end.y - start.y):
+			# 水平为主
+			for x in range(mini(start.x, end.x), maxi(start.x, end.x) + 1):
+				for w in range(width):
+					_tile_map.set_cell(0, Vector2i(x, start.y + w), 0, Vector2i.ZERO)
+			for y in range(mini(start.y, end.y), maxi(start.y, end.y) + 1):
+				for w in range(width):
+					_tile_map.set_cell(0, Vector2i(end.x, y + w), 0, Vector2i.ZERO)
+		else:
+			# 垂直为主
+			for y in range(mini(start.y, end.y), maxi(start.y, end.y) + 1):
+				for w in range(width):
+					_tile_map.set_cell(0, Vector2i(start.x + w, y), 0, Vector2i.ZERO)
+			for x in range(mini(start.x, end.x), maxi(start.x, end.x) + 1):
+				for w in range(width):
+					_tile_map.set_cell(0, Vector2i(x, end.y + w), 0, Vector2i.ZERO)
 
 
 func _populate_rooms() -> void:
 	"""
 	填充房间内容（敌人和道具）
 	"""
-	# TODO: 实现敌人和道具的放置
-	# 这里应该根据房间配置生成敌人和道具
-	pass
+	for room in rooms:
+		var room_type: RoomType = room.get("type", RoomType.STANDARD)
+
+		# 跳过起始房间
+		if room_type == RoomType.START:
+			continue
+
+		# 生成敌人
+		var enemy_count: int = room.get("enemy_count", 0)
+		if enemy_count > 0:
+			_spawn_enemies_in_room(room, enemy_count, room_type)
+
+		# 生成道具
+		var item_count: int = room.get("item_count", 0)
+		if item_count > 0:
+			_spawn_items_in_room(room, item_count, room_type)
+
+	print("[LevelGenerator] 房间内容填充完成")
+
+
+func _spawn_enemies_in_room(room: Dictionary, count: int, room_type: RoomType) -> void:
+	"""在房间中生成敌人"""
+	var world_rect: Rect2 = room.get("world_rect", Rect2())
+	var spawn_positions := _get_spawn_positions_in_rect(world_rect, count, 50.0)
+
+	for i in range(spawn_positions.size()):
+		var spawn_pos: Vector2 = spawn_positions[i]
+		var enemy_type: String = _get_enemy_type_for_room(room_type, i)
+
+		# 通知WaveManager或直接生成
+		_spawn_single_enemy(enemy_type, spawn_pos)
+
+
+func _spawn_items_in_room(room: Dictionary, count: int, room_type: RoomType) -> void:
+	"""在房间中生成道具"""
+	var world_rect: Rect2 = room.get("world_rect", Rect2())
+	var spawn_positions := _get_spawn_positions_in_rect(world_rect, count, 30.0)
+
+	for i in range(spawn_positions.size()):
+		var spawn_pos: Vector2 = spawn_positions[i]
+		var item_type: String = _get_item_type_for_room(room_type, i)
+
+		# 生成道具
+		_spawn_single_item(item_type, spawn_pos)
+
+
+func _get_spawn_positions_in_rect(rect: Rect2, count: int, min_distance: float) -> Array[Vector2]:
+	"""在矩形区域内获取均匀分布的生成点"""
+	var positions: Array[Vector2] = []
+	var margin := 40.0  # 边缘距离
+
+	for i in range(count):
+		var attempts := 0
+		var max_attempts := 20
+
+		while attempts < max_attempts:
+			var x := randf_range(rect.position.x + margin, rect.end.x - margin)
+			var y := randf_range(rect.position.y + margin, rect.end.y - margin)
+			var candidate := Vector2(x, y)
+
+			# 检查与其他点的距离
+			var valid := true
+			for existing in positions:
+				if candidate.distance_to(existing) < min_distance:
+					valid = false
+					break
+
+			if valid:
+				positions.append(candidate)
+				break
+
+			attempts += 1
+
+		# 如果尝试次数用尽，随机放置
+		if attempts >= max_attempts:
+			var x := randf_range(rect.position.x + margin, rect.end.x - margin)
+			var y := randf_range(rect.position.y + margin, rect.end.y - margin)
+			positions.append(Vector2(x, y))
+
+	return positions
+
+
+func _get_enemy_type_for_room(room_type: RoomType, index: int) -> String:
+	"""根据房间类型获取敌人类型"""
+	match room_type:
+		RoomType.BOSS:
+			return "boss"
+		RoomType.ELITE:
+			var elite_types := ["shadow_assassin", "flame_titan", "frost_giant", "void_walker"]
+			return elite_types[randi() % elite_types.size()]
+		_:
+			# 标准房间混合敌人类型
+			var standard_types := ["melee", "melee", "ranged", "tank"]
+			return standard_types[randi() % standard_types.size()]
+
+
+func _get_item_type_for_room(room_type: RoomType, index: int) -> String:
+	"""根据房间类型获取道具类型"""
+	match room_type:
+		RoomType.BOSS:
+			var boss_items := ["weapon_void_blade", "weapon_dragon_breath", "special_exp_gem", "special_revive_cross"]
+			return boss_items[randi() % boss_items.size()]
+		RoomType.ELITE:
+			var elite_items := ["weapon_steel_sword", "armor_iron", "accessory_ring_of_power", "consumable_elixir"]
+			return elite_items[randi() % elite_items.size()]
+		_:
+			var standard_items := ["consumable_health_potion", "consumable_mana_potion", "accessory_ring_of_power", "armor_cloth"]
+			return standard_items[randi() % standard_items.size()]
+
+
+func _spawn_single_enemy(enemy_type: String, position: Vector2) -> void:
+	"""生成单个敌人"""
+	# 通过WaveManager生成，或直接实例化
+	if GameManager and GameManager.has_method("get_wave_manager"):
+		var wave_mgr = GameManager.get_wave_manager()
+		if wave_mgr and wave_mgr.has_method("spawn_specific_enemy"):
+			wave_mgr.spawn_specific_enemy(enemy_type, position)
+			return
+
+	# 保存生成点，后续使用
+	_enemy_spawns.append(position)
+
+	# 记录到关卡网格
+	level_grid["enemy_spawn_%d" % _enemy_spawns.size()] = {
+		"type": enemy_type,
+		"position": position
+	}
+
+
+func _spawn_single_item(item_type: String, position: Vector2) -> void:
+	"""生成单个道具"""
+	# 保存生成点，后续使用
+	_item_spawns.append(position)
+
+	# 记录到关卡网格
+	level_grid["item_spawn_%d" % _item_spawns.size()] = {
+		"type": item_type,
+		"position": position
+	}
 
 
 func _place_player() -> void:

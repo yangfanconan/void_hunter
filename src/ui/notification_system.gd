@@ -268,8 +268,9 @@ func _connect_signals() -> void:
 	"""
 	连接信号
 	"""
-	# 连接游戏管理器信号
-	GameManager.achievement_unlocked.connect(_on_achievement_unlocked)
+	# 连接 AchievementManager 信号
+	if AchievementManager:
+		AchievementManager.achievement_unlocked.connect(_on_achievement_unlocked)
 
 
 # =============================================================================
@@ -474,10 +475,13 @@ func _process_queue() -> void:
 # 信号回调
 # =============================================================================
 
-func _on_achievement_unlocked(achievement_id: String) -> void:
+func _on_achievement_unlocked(achievement_id: String, achievement_data: Dictionary) -> void:
 	"""
 	成就解锁回调
 	@param achievement_id: 成就ID
+	@param achievement_data: 成就数据
 	"""
-	# TODO: 从成就系统获取成就名称和描述
-	show_achievement(achievement_id)
+	# 从 AchievementManager 获取成就名称和描述
+	var name: String = achievement_data.get("name", achievement_id)
+	var description: String = achievement_data.get("description", "")
+	show_achievement(name, description)

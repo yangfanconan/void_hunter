@@ -512,13 +512,15 @@ func _on_character_unlocked(_character_id: String, character_name: String) -> vo
 	show_character_unlocked_notification(character_name)
 
 
-func _on_achievement_unlocked(achievement_id: String) -> void:
+func _on_achievement_unlocked(achievement_id: String, achievement_data: Dictionary) -> void:
 	"""
 	成就解锁回调
 	@param achievement_id: 成就ID
+	@param achievement_data: 成就数据
 	"""
-	# TODO: 从成就系统获取成就名称
-	show_achievement_notification(achievement_id)
+	# 从 AchievementManager 获取成就名称
+	var name: String = achievement_data.get("name", achievement_id)
+	show_achievement_notification(name)
 
 
 # =============================================================================
