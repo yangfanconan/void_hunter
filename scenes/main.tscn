@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=7 format=3 uid="uid://main_scene"]
 
 [ext_resource type="Script" path="res://src/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://src/ui/hud.gd" id="2_hud"]
 [ext_resource type="Script" path="res://src/ui/main_menu.gd" id="3_main_menu"]
 [ext_resource type="Script" path="res://src/ui/mobile_controls.gd" id="4_mobile"]
 [ext_resource type="Script" path="res://src/ui/game_over.gd" id="5_game_over"]
+[ext_resource type="Script" path="res://src/ui/character_select.gd" id="6_character"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_game")
@@ -37,9 +38,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -100.0
-offset_top = -100.0
+offset_top = -150.0
 offset_right = 100.0
-offset_bottom = 100.0
+offset_bottom = 150.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 20
@@ -53,6 +54,10 @@ horizontal_alignment = 1
 layout_mode = 2
 text = "新游戏"
 
+[node name="ButtonCharacter" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
+layout_mode = 2
+text = "角色选择"
+
 [node name="ButtonContinue" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
 layout_mode = 2
 text = "继续游戏"
@@ -64,6 +69,16 @@ text = "设置"
 [node name="ButtonQuit" type="Button" parent="CanvasLayer/MainMenu/VBoxContainer"]
 layout_mode = 2
 text = "退出"
+
+[node name="CharacterSelect" type="Control" parent="CanvasLayer/MainMenu"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_character")
 
 [node name="GameOver" type="Control" parent="CanvasLayer"]
 visible = false
@@ -379,10 +394,12 @@ layout_mode = 2
 text = "返回主菜单"
 
 [connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonNewGame" to="." method="_on_new_game_pressed"]
+[connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonCharacter" to="." method="_on_character_select_pressed"]
 [connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonContinue" to="." method="_on_continue_pressed"]
 [connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonSettings" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="CanvasLayer/MainMenu/VBoxContainer/ButtonQuit" to="." method="_on_quit_pressed"]
 [connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonResume" to="." method="_on_pause_resume"]
+[connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonTalent" to="." method="_on_pause_talent"]
 [connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonSettings" to="." method="_on_pause_settings"]
 [connection signal="pressed" from="PauseMenu/Panel/VBoxContainer/ButtonMainMenu" to="." method="_on_pause_main_menu"]
 

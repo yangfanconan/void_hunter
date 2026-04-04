@@ -207,7 +207,8 @@ func _initialize_character_grid() -> void:
 		_challenge_system = ChallengeSystem.get_instance()
 
 	if not _challenge_system:
-		push_error("ChallengeSystem 未找到")
+		print("[CharacterSelect] ChallengeSystem 未找到，使用默认角色列表")
+		_create_default_character_cards()
 		return
 
 	# 清除现有卡片
@@ -226,6 +227,82 @@ func _initialize_character_grid() -> void:
 	var unlocked: Array = _challenge_system.get_unlocked_characters()
 	if unlocked.size() > 0:
 		select_character(unlocked[0])
+
+
+## 创建默认角色卡片（当ChallengeSystem不可用时）
+func _create_default_character_cards() -> void:
+	"""创建默认的角色卡片列表"""
+	# 清除现有卡片
+	_clear_character_cards()
+
+	# 默认角色列表
+	var default_characters: Array = [
+		{"id": "wandering_swordsman", "name": "流浪剑客", "type": "近战", "description": "使用剑术的流浪战士"},
+		{"id": "arcane_warlock", "name": "奥术术士", "type": "法师", "description": "操控奥术能量的术士"},
+		{"id": "berserker", "name": "狂战士", "type": "近战", "description": "无畏的战场杀戮者"},
+		{"id": "elemental_mage", "name": "元素法师", "type": "法师", "description": "掌控元素的法师"},
+	]
+
+	for char_data in default_characters:
+		var card: Control = _create_default_card(char_data)
+		if card:
+			card_container.add_child(card)
+			character_cards[char_data["id"]] = card
+
+	# 默认选中第一个角色
+	if default_characters.size() > 0:
+		select_character(default_characters[0]["id"])
+
+
+## 创建默认角色卡片
+func _create_default_card(char_data: Dictionary) -> Control:
+	"""创建一个简单的默认角色卡片"""
+	var card: Control = Control.new()
+	card.name = char_data["id"]
+	card.custom_minimum_size = Vector2(150, 200)
+
+	# 背景
+	var background: PanelContainer = PanelContainer.new()
+	background.name = "Background"
+	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	card.add_child(background)
+
+	# 内容容器
+	var content: VBoxContainer = VBoxContainer.new()
+	content.name = "Content"
+	background.add_child(content)
+
+	# 角色名称
+	var name_lbl: Label = Label.new()
+	name_lbl.name = "NameLabel"
+	name_lbl.text = char_data["name"]
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	content.add_child(name_lbl)
+
+	# 角色类型
+	var type_lbl: Label = Label.new()
+	type_lbl.name = "TypeLabel"
+	type_lbl.text = char_data["type"]
+	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	type_lbl.add_theme_font_size_override("font_size", 12)
+	content.add_child(type_lbl)
+
+	# 描述
+	var desc_lbl: Label = Label.new()
+	desc_lbl.name = "DescLabel"
+	desc_lbl.text = char_data["description"]
+	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_lbl.add_theme_font_size_override("font_size", 11)
+	desc_lbl.modulate = Color(0.7, 0.7, 0.7)
+	content.add_child(desc_lbl)
+
+	# 保存角色ID用于点击检测
+	card.set_meta("character_id", char_data["id"])
+
+	# 连接点击信号
+	card.gui_input.connect(_on_card_gui_input.bind(char_data["id"]))
+
+	return card
 
 
 ## 清除所有角色卡片
@@ -642,6 +719,17 @@ func _show_unlock_notification(char_name: String) -> void:
 # =============================================================================
 # 公共方法 - 外部调用
 # =============================================================================
+
+## 显示角色选择界面
+func show_select() -> void:
+	"""显示角色选择界面"""
+	visible = true
+	_initialize_character_grid()
+
+## 隐藏角色选择界面
+func hide_select() -> void:
+	"""隐藏角色选择界面"""
+	visible = false
 
 ## 获取当前选中的角色
 func get_selected_character() -> String:

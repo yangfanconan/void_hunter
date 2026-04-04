@@ -133,6 +133,12 @@ func _initialize_ui_components() -> void:
 
 	# 查找角色选择界面
 	_character_select = _main_menu.get_node_or_null("CharacterSelect")
+	if _character_select:
+		# 连接角色选择信号
+		if _character_select.has_signal("character_selected"):
+			_character_select.character_selected.connect(_on_character_selected)
+		if _character_select.has_signal("back_pressed"):
+			_character_select.back_pressed.connect(_on_character_select_back)
 
 
 func _process(delta: float) -> void:
@@ -951,10 +957,31 @@ func _on_character_select_pressed() -> void:
 	if _character_select:
 		_main_menu.visible = false
 		_character_select.visible = true
+		if _character_select.has_method("show_select"):
+			_character_select.show_select()
 		current_state = GameState.CHARACTER_SELECT
 	else:
 		print("[Game] 角色选择界面未初始化，直接开始游戏")
 		_start_game()
+
+
+func _on_character_selected(character_id: String) -> void:
+	"""角色被选中"""
+	_selected_character_id = character_id
+	print("[Game] 选择角色: %s" % character_id)
+	# 返回主菜单
+	if _character_select:
+		_character_select.visible = false
+	_main_menu.visible = true
+	current_state = GameState.MAIN_MENU
+
+
+func _on_character_select_back() -> void:
+	"""角色选择返回"""
+	if _character_select:
+		_character_select.visible = false
+	_main_menu.visible = true
+	current_state = GameState.MAIN_MENU
 
 
 func _on_quit_pressed() -> void:

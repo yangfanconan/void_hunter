@@ -19,16 +19,16 @@ signal quit_pressed()
 # 节点引用
 # =============================================================================
 
-@onready var _button_container: VBoxContainer = $VBoxContainer/ButtonContainer
-@onready var _button_start: Button = $VBoxContainer/ButtonContainer/ButtonStart
-@onready var _button_character: Button = $VBoxContainer/ButtonContainer/ButtonCharacter
-@onready var _button_codex: Button = $VBoxContainer/ButtonContainer/ButtonCodex
-@onready var _button_settings: Button = $VBoxContainer/ButtonContainer/ButtonSettings
-@onready var _button_quit: Button = $VBoxContainer/ButtonContainer/ButtonQuit
+@onready var _button_container: VBoxContainer = get_node_or_null("VBoxContainer/ButtonContainer")
+@onready var _button_start: Button = get_node_or_null("VBoxContainer/ButtonContainer/ButtonStart")
+@onready var _button_character: Button = get_node_or_null("VBoxContainer/ButtonContainer/ButtonCharacter")
+@onready var _button_codex: Button = get_node_or_null("VBoxContainer/ButtonContainer/ButtonCodex")
+@onready var _button_settings: Button = get_node_or_null("VBoxContainer/ButtonContainer/ButtonSettings")
+@onready var _button_quit: Button = get_node_or_null("VBoxContainer/ButtonContainer/ButtonQuit")
 
-@onready var _character_select: Control = $CharacterSelect
-@onready var _settings_menu: Control = $SettingsMenu
-@onready var _item_codex: Control = $ItemCodex
+@onready var _character_select: Control = get_node_or_null("CharacterSelect")
+@onready var _settings_menu: Control = get_node_or_null("SettingsMenu")
+@onready var _item_codex: Control = get_node_or_null("ItemCodex")
 
 # =============================================================================
 # 私有变量
