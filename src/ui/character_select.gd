@@ -112,7 +112,7 @@ var _tween: Tween = null
 # =============================================================================
 
 func _ready() -> void:
-	_setup_ui()
+	_build_full_ui()
 	_connect_signals()
 	_initialize_character_grid()
 
@@ -132,42 +132,169 @@ func _exit_tree() -> void:
 # 公共方法 - 初始化
 # =============================================================================
 
+## 构建完整UI
+func _build_full_ui() -> void:
+	"""构建完整的角色选择UI"""
+	# 背景
+	var bg = ColorRect.new()
+	bg.name = "Background"
+	bg.color = Color(0.05, 0.05, 0.1, 1.0)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+
+	# 主容器
+	var main_hbox = HBoxContainer.new()
+	main_hbox.name = "MainContainer"
+	main_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main_hbox.add_theme_constant_override("separation", 20)
+	main_hbox.add_theme_constant_override("margin_left", 20)
+	main_hbox.add_theme_constant_override("margin_right", 20)
+	main_hbox.add_theme_constant_override("margin_top", 20)
+	main_hbox.add_theme_constant_override("margin_bottom", 20)
+	add_child(main_hbox)
+
+	# 左侧：角色网格
+	var left_panel = PanelContainer.new()
+	left_panel.name = "LeftPanel"
+	left_panel.custom_minimum_size = Vector2(700, 0)
+	var left_style = StyleBoxFlat.new()
+	left_style.bg_color = Color(0.1, 0.1, 0.15, 0.9)
+	left_style.set_corner_radius_all(8)
+	left_panel.add_theme_stylebox_override("panel", left_style)
+	main_hbox.add_child(left_panel)
+
+	var left_vbox = VBoxContainer.new()
+	left_vbox.add_theme_constant_override("separation", 10)
+	left_panel.add_child(left_vbox)
+
+	# 标题
+	var title = Label.new()
+	title.text = "选择角色"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
+	left_vbox.add_child(title)
+
+	# 角色网格容器
+	card_container = GridContainer.new()
+	card_container.name = "CharacterGrid"
+	card_container.columns = CHARACTERS_PER_ROW
+	card_container.add_theme_constant_override("h_separation", CARD_SPACING)
+	card_container.add_theme_constant_override("v_separation", CARD_SPACING)
+	card_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left_vbox.add_child(card_container)
+
+	# 右侧：详情面板
+	detail_panel = PanelContainer.new()
+	detail_panel.name = "DetailPanel"
+	detail_panel.custom_minimum_size = Vector2(400, 0)
+	var right_style = StyleBoxFlat.new()
+	right_style.bg_color = Color(0.1, 0.1, 0.15, 0.9)
+	right_style.set_corner_radius_all(8)
+	detail_panel.add_theme_stylebox_override("panel", right_style)
+	main_hbox.add_child(detail_panel)
+
+	var detail_vbox = VBoxContainer.new()
+	detail_vbox.add_theme_constant_override("separation", 15)
+	detail_vbox.add_theme_constant_override("margin_left", 15)
+	detail_vbox.add_theme_constant_override("margin_right", 15)
+	detail_vbox.add_theme_constant_override("margin_top", 15)
+	detail_vbox.add_theme_constant_override("margin_bottom", 15)
+	detail_panel.add_child(detail_vbox)
+
+	# 角色名称
+	name_label = Label.new()
+	name_label.text = "角色名称"
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 22)
+	name_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
+	detail_vbox.add_child(name_label)
+
+	# 角色类型
+	type_label = Label.new()
+	type_label.text = "类型"
+	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	type_label.add_theme_font_size_override("font_size", 14)
+	type_label.modulate = Color(0.6, 0.8, 1.0)
+	detail_vbox.add_child(type_label)
+
+	# 分隔线
+	var sep1 = HSeparator.new()
+	detail_vbox.add_child(sep1)
+
+	# 角色描述
+	description_label = Label.new()
+	description_label.text = "角色描述"
+	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	description_label.add_theme_font_size_override("font_size", 13)
+	description_label.modulate = Color(0.7, 0.7, 0.7)
+	detail_vbox.add_child(description_label)
+
+	# 被动技能名称
+	passive_name_label = Label.new()
+	passive_name_label.text = "被动技能"
+	passive_name_label.add_theme_font_size_override("font_size", 14)
+	passive_name_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
+	detail_vbox.add_child(passive_name_label)
+
+	# 被动技能描述
+	passive_desc_label = Label.new()
+	passive_desc_label.text = "被动技能描述"
+	passive_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	passive_desc_label.add_theme_font_size_override("font_size", 12)
+	passive_desc_label.modulate = Color(0.6, 0.6, 0.6)
+	detail_vbox.add_child(passive_desc_label)
+
+	# 分隔线
+	var sep2 = HSeparator.new()
+	detail_vbox.add_child(sep2)
+
+	# 解锁条件
+	unlock_condition_label = Label.new()
+	unlock_condition_label.text = "解锁条件"
+	unlock_condition_label.add_theme_font_size_override("font_size", 12)
+	detail_vbox.add_child(unlock_condition_label)
+
+	# 属性容器
+	stats_container = VBoxContainer.new()
+	stats_container.name = "StatsContainer"
+	stats_container.add_theme_constant_override("separation", 5)
+	detail_vbox.add_child(stats_container)
+
+	# 填充空间
+	var spacer = Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_vbox.add_child(spacer)
+
+	# 按钮容器
+	var btn_container = HBoxContainer.new()
+	btn_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_container.add_theme_constant_override("separation", 20)
+	detail_vbox.add_child(btn_container)
+
+	# 返回按钮
+	back_button = Button.new()
+	back_button.text = "返回"
+	back_button.custom_minimum_size = Vector2(100, 40)
+	btn_container.add_child(back_button)
+
+	# 选择按钮
+	select_button = Button.new()
+	select_button.text = "选择角色"
+	select_button.custom_minimum_size = Vector2(120, 40)
+	btn_container.add_child(select_button)
+
+
 ## 设置UI
 func _setup_ui() -> void:
 	"""初始化UI组件"""
-	# 如果没有在编辑器中设置，则动态创建
-	if card_container == null:
-		card_container = _create_grid_container()
-
-	if detail_panel == null:
-		detail_panel = _create_detail_panel()
-
+	# UI已在_build_full_ui中创建
 	if select_button:
 		select_button.text = "选择角色"
 		select_button.disabled = true
 
 	if back_button:
 		back_button.text = "返回"
-
-
-## 创建网格容器
-func _create_grid_container() -> GridContainer:
-	"""动态创建网格容器"""
-	var container = GridContainer.new()
-	container.name = "CharacterGrid"
-	container.columns = CHARACTERS_PER_ROW
-	container.add_theme_constant_override("h_separation", CARD_SPACING)
-	container.add_theme_constant_override("v_separation", CARD_SPACING)
-	return container
-
-
-## 创建详情面板
-func _create_detail_panel() -> PanelContainer:
-	"""动态创建详情面板"""
-	var panel = PanelContainer.new()
-	panel.name = "DetailPanel"
-	panel.custom_minimum_size = Vector2(400, 500)
-	return panel
 
 
 ## 连接信号
