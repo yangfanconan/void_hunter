@@ -329,9 +329,14 @@ func _disconnect_challenge_signals() -> void:
 ## 初始化角色网格
 func _initialize_character_grid() -> void:
 	"""创建所有角色卡片"""
-	if not _challenge_system:
-		await get_tree().process_frame
-		_challenge_system = ChallengeSystem.get_instance()
+	print("[CharacterSelect] 初始化角色网格, card_container: %s" % str(card_container))
+
+	if card_container == null:
+		print("[CharacterSelect] 错误: card_container 为 null")
+		return
+
+	# 尝试获取 ChallengeSystem
+	_challenge_system = ChallengeSystem.get_instance()
 
 	if not _challenge_system:
 		print("[CharacterSelect] ChallengeSystem 未找到，使用默认角色列表")
@@ -359,6 +364,12 @@ func _initialize_character_grid() -> void:
 ## 创建默认角色卡片（当ChallengeSystem不可用时）
 func _create_default_character_cards() -> void:
 	"""创建默认的角色卡片列表"""
+	print("[CharacterSelect] 创建默认角色卡片, card_container: %s" % str(card_container))
+
+	if card_container == null:
+		print("[CharacterSelect] 错误: card_container 为 null，无法创建卡片")
+		return
+
 	# 清除现有卡片
 	_clear_character_cards()
 
@@ -370,11 +381,14 @@ func _create_default_character_cards() -> void:
 		{"id": "elemental_mage", "name": "元素法师", "type": "法师", "description": "掌控元素的法师"},
 	]
 
+	print("[CharacterSelect] 创建 %d 个默认角色卡片" % default_characters.size())
+
 	for char_data in default_characters:
 		var card: Control = _create_default_card(char_data)
 		if card:
 			card_container.add_child(card)
 			character_cards[char_data["id"]] = card
+			print("[CharacterSelect] 添加卡片: %s" % char_data["name"])
 
 	# 默认选中第一个角色
 	if default_characters.size() > 0:
@@ -386,24 +400,44 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	"""创建一个简单的默认角色卡片"""
 	var card: Control = Control.new()
 	card.name = char_data["id"]
-	card.custom_minimum_size = Vector2(150, 200)
+	card.custom_minimum_size = Vector2(160, 200)
 
 	# 背景
 	var background: PanelContainer = PanelContainer.new()
 	background.name = "Background"
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var bg_style = StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.15, 0.15, 0.2, 0.95)
+	bg_style.border_color = Color(0.3, 0.3, 0.4)
+	bg_style.set_border_width_all(2)
+	bg_style.set_corner_radius_all(8)
+	background.add_theme_stylebox_override("panel", bg_style)
 	card.add_child(background)
 
 	# 内容容器
 	var content: VBoxContainer = VBoxContainer.new()
 	content.name = "Content"
+	content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content.add_theme_constant_override("separation", 8)
+	content.add_theme_constant_override("margin_left", 10)
+	content.add_theme_constant_override("margin_right", 10)
+	content.add_theme_constant_override("margin_top", 10)
+	content.add_theme_constant_override("margin_bottom", 10)
 	background.add_child(content)
+
+	# 角色图标占位
+	var icon_placeholder = ColorRect.new()
+	icon_placeholder.color = Color(0.3, 0.3, 0.4)
+	icon_placeholder.custom_minimum_size = Vector2(80, 80)
+	content.add_child(icon_placeholder)
 
 	# 角色名称
 	var name_lbl: Label = Label.new()
 	name_lbl.name = "NameLabel"
 	name_lbl.text = char_data["name"]
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.add_theme_font_size_override("font_size", 16)
+	name_lbl.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
 	content.add_child(name_lbl)
 
 	# 角色类型
@@ -412,6 +446,7 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	type_lbl.text = char_data["type"]
 	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	type_lbl.add_theme_font_size_override("font_size", 12)
+	type_lbl.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
 	content.add_child(type_lbl)
 
 	# 描述
@@ -419,8 +454,9 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	desc_lbl.name = "DescLabel"
 	desc_lbl.text = char_data["description"]
 	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 	desc_lbl.add_theme_font_size_override("font_size", 11)
-	desc_lbl.modulate = Color(0.7, 0.7, 0.7)
+	desc_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	content.add_child(desc_lbl)
 
 	# 保存角色ID用于点击检测
@@ -850,8 +886,14 @@ func _show_unlock_notification(char_name: String) -> void:
 ## 显示角色选择界面
 func show_select() -> void:
 	"""显示角色选择界面"""
+	print("[CharacterSelect] show_select 被调用")
 	visible = true
+	# 重新初始化角色网格以确保正确显示
 	_initialize_character_grid()
+	# 强制更新布局
+	if card_container:
+		card_container.queue_sort()
+	print("[CharacterSelect] 界面显示完成，卡片数量: %d" % character_cards.size())
 
 ## 隐藏角色选择界面
 func hide_select() -> void:
