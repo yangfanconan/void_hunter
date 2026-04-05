@@ -322,7 +322,7 @@ func _build_full_ui() -> void:
 
 	# 选择按钮 - 突出显示
 	select_button = Button.new()
-	select_button.text = "选择角色"
+	select_button.text = "请选择角色"
 	select_button.custom_minimum_size = Vector2(140, 50)
 	# 正常状态 - 明亮的绿色
 	var select_normal = StyleBoxFlat.new()
@@ -339,8 +339,17 @@ func _build_full_ui() -> void:
 	select_hover.set_corner_radius_all(10)
 	select_button.add_theme_stylebox_override("hover", select_hover)
 	select_button.add_theme_stylebox_override("pressed", select_hover)
+	# 禁用状态
+	var select_disabled = StyleBoxFlat.new()
+	select_disabled.bg_color = Color(0.3, 0.3, 0.3, 1.0)
+	select_disabled.border_color = Color(0.4, 0.4, 0.4)
+	select_disabled.set_border_width_all(2)
+	select_disabled.set_corner_radius_all(10)
+	select_button.add_theme_stylebox_override("disabled", select_disabled)
 	select_button.add_theme_font_size_override("font_size", 16)
 	select_button.add_theme_color_override("font_color", Color.WHITE)
+	select_button.add_theme_color_override("font_disabled_color", Color(0.6, 0.6, 0.6))
+	select_button.disabled = true  # 初始禁用
 	btn_container.add_child(select_button)
 
 	print("[CharacterSelect] UI构建完成")
@@ -595,42 +604,55 @@ func select_character(char_id: String) -> void:
 ## 更新卡片选中状态
 func _update_card_selection() -> void:
 	"""更新所有卡片的选中视觉效果"""
+	print("[CharacterSelect] _update_card_selection 被调用, 选中: %s" % selected_character_id)
 	for char_id in character_cards:
-		var card: Button = character_cards[char_id]
+		var card = character_cards[char_id]
 		if card == null:
 			continue
 
-		# 创建选中/未选中样式
-		var style: StyleBoxFlat = StyleBoxFlat.new()
-		style.set_corner_radius_all(10)
+		# 检查是否是Button类型
+		if card is Button:
+			# Button类型 - 使用样式覆盖
+			var style: StyleBoxFlat = StyleBoxFlat.new()
+			style.set_corner_radius_all(10)
 
-		if char_id == selected_character_id:
-			# 选中状态 - 明亮的蓝色边框
-			style.bg_color = Color(0.3, 0.45, 0.65, 1.0)
-			style.border_color = Color(0.5, 0.9, 1.0)
-			style.set_border_width_all(4)
+			if char_id == selected_character_id:
+				style.bg_color = Color(0.3, 0.45, 0.65, 1.0)
+				style.border_color = Color(0.5, 0.9, 1.0)
+				style.set_border_width_all(4)
+			else:
+				style.bg_color = Color(0.15, 0.15, 0.25, 1.0)
+				style.border_color = Color(0.4, 0.4, 0.6)
+				style.set_border_width_all(2)
+
+			card.add_theme_stylebox_override("normal", style)
+
+			# 更新hover样式
+			var hover_style: StyleBoxFlat = StyleBoxFlat.new()
+			hover_style.set_corner_radius_all(10)
+			if char_id == selected_character_id:
+				hover_style.bg_color = Color(0.35, 0.5, 0.7, 1.0)
+				hover_style.border_color = Color(0.6, 1.0, 1.0)
+				hover_style.set_border_width_all(4)
+			else:
+				hover_style.bg_color = Color(0.2, 0.2, 0.3, 1.0)
+				hover_style.border_color = Color(0.6, 0.6, 0.8)
+				hover_style.set_border_width_all(3)
+			card.add_theme_stylebox_override("hover", hover_style)
 		else:
-			# 未选中状态
-			style.bg_color = Color(0.15, 0.15, 0.25, 1.0)
-			style.border_color = Color(0.4, 0.4, 0.6)
-			style.set_border_width_all(2)
-
-		card.add_theme_stylebox_override("normal", style)
-
-		# 同时更新hover样式
-		var hover_style: StyleBoxFlat = StyleBoxFlat.new()
-		hover_style.set_corner_radius_all(10)
-		if char_id == selected_character_id:
-			hover_style.bg_color = Color(0.35, 0.5, 0.7, 1.0)
-			hover_style.border_color = Color(0.6, 1.0, 1.0)
-			hover_style.set_border_width_all(4)
-		else:
-			hover_style.bg_color = Color(0.2, 0.2, 0.3, 1.0)
-			hover_style.border_color = Color(0.6, 0.6, 0.8)
-			hover_style.set_border_width_all(3)
-		card.add_theme_stylebox_override("hover", hover_style)
-
-	print("[CharacterSelect] 更新选中状态: %s" % selected_character_id)
+			# Control类型 - 更新背景PanelContainer
+			var background = card.get_node_or_null("Background")
+			if background and background is PanelContainer:
+				var style: StyleBoxFlat = StyleBoxFlat.new()
+				style.set_corner_radius_all(8)
+				if char_id == selected_character_id:
+					style.bg_color = Color(0.3, 0.45, 0.65, 1.0)
+					style.border_color = Color(0.5, 0.9, 1.0)
+					style.set_border_width_all(4)
+				else:
+					style.bg_color = Color(0.2, 0.2, 0.25, 1.0)
+					style.set_border_width_all(0)
+				background.add_theme_stylebox_override("panel", style)
 
 
 ## 更新详情面板
@@ -760,7 +782,7 @@ func _update_detail_panel_default() -> void:
 		unlock_condition_label.add_theme_color_override("font_color", Color.GREEN)
 	if select_button:
 		select_button.disabled = false
-		select_button.text = "选择角色"
+		select_button.text = "✓ 确认选择"
 		print("[CharacterSelect] 选择按钮已启用，角色: %s" % selected_character_id)
 
 
