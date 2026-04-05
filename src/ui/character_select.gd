@@ -20,9 +20,6 @@ signal back_pressed()
 # 常量定义
 # =============================================================================
 
-## 角色卡片场景路径（需要创建对应的tscn文件）
-const CHARACTER_CARD_SCENE: String = "res://scenes/ui/character_card.tscn"
-
 ## 每行显示的角色数量
 const CHARACTERS_PER_ROW: int = 4
 
@@ -135,45 +132,67 @@ func _exit_tree() -> void:
 ## 构建完整UI
 func _build_full_ui() -> void:
 	"""构建完整的角色选择UI"""
+	print("[CharacterSelect] 开始构建UI")
+
 	# 背景
 	var bg = ColorRect.new()
 	bg.name = "Background"
 	bg.color = Color(0.05, 0.05, 0.1, 1.0)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.z_index = -1
 	add_child(bg)
+
+	# 主容器 - 使用 MarginContainer 包裹
+	var margin = MarginContainer.new()
+	margin.name = "MainMargin"
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	add_child(margin)
 
 	# 主容器
 	var main_hbox = HBoxContainer.new()
 	main_hbox.name = "MainContainer"
 	main_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	main_hbox.add_theme_constant_override("separation", 20)
-	main_hbox.add_theme_constant_override("margin_left", 20)
-	main_hbox.add_theme_constant_override("margin_right", 20)
-	main_hbox.add_theme_constant_override("margin_top", 20)
-	main_hbox.add_theme_constant_override("margin_bottom", 20)
-	add_child(main_hbox)
+	margin.add_child(main_hbox)
 
 	# 左侧：角色网格
 	var left_panel = PanelContainer.new()
 	left_panel.name = "LeftPanel"
-	left_panel.custom_minimum_size = Vector2(700, 0)
+	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var left_style = StyleBoxFlat.new()
-	left_style.bg_color = Color(0.1, 0.1, 0.15, 0.9)
+	left_style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
 	left_style.set_corner_radius_all(8)
 	left_panel.add_theme_stylebox_override("panel", left_style)
 	main_hbox.add_child(left_panel)
 
+	var left_margin = MarginContainer.new()
+	left_margin.add_theme_constant_override("margin_left", 15)
+	left_margin.add_theme_constant_override("margin_right", 15)
+	left_margin.add_theme_constant_override("margin_top", 15)
+	left_margin.add_theme_constant_override("margin_bottom", 15)
+	left_panel.add_child(left_margin)
+
 	var left_vbox = VBoxContainer.new()
-	left_vbox.add_theme_constant_override("separation", 10)
-	left_panel.add_child(left_vbox)
+	left_vbox.add_theme_constant_override("separation", 15)
+	left_margin.add_child(left_vbox)
 
 	# 标题
 	var title = Label.new()
 	title.text = "选择角色"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
 	left_vbox.add_child(title)
+
+	# 分隔线
+	var sep = HSeparator.new()
+	sep.custom_minimum_size.y = 10
+	left_vbox.add_child(sep)
 
 	# 角色网格容器
 	card_container = GridContainer.new()
@@ -187,27 +206,31 @@ func _build_full_ui() -> void:
 	# 右侧：详情面板
 	detail_panel = PanelContainer.new()
 	detail_panel.name = "DetailPanel"
-	detail_panel.custom_minimum_size = Vector2(400, 0)
+	detail_panel.custom_minimum_size = Vector2(320, 0)
+	detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var right_style = StyleBoxFlat.new()
-	right_style.bg_color = Color(0.1, 0.1, 0.15, 0.9)
+	right_style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
 	right_style.set_corner_radius_all(8)
 	detail_panel.add_theme_stylebox_override("panel", right_style)
 	main_hbox.add_child(detail_panel)
 
+	var detail_margin = MarginContainer.new()
+	detail_margin.add_theme_constant_override("margin_left", 15)
+	detail_margin.add_theme_constant_override("margin_right", 15)
+	detail_margin.add_theme_constant_override("margin_top", 15)
+	detail_margin.add_theme_constant_override("margin_bottom", 15)
+	detail_panel.add_child(detail_margin)
+
 	var detail_vbox = VBoxContainer.new()
-	detail_vbox.add_theme_constant_override("separation", 15)
-	detail_vbox.add_theme_constant_override("margin_left", 15)
-	detail_vbox.add_theme_constant_override("margin_right", 15)
-	detail_vbox.add_theme_constant_override("margin_top", 15)
-	detail_vbox.add_theme_constant_override("margin_bottom", 15)
-	detail_panel.add_child(detail_vbox)
+	detail_vbox.add_theme_constant_override("separation", 12)
+	detail_margin.add_child(detail_vbox)
 
 	# 角色名称
 	name_label = Label.new()
 	name_label.text = "角色名称"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 22)
-	name_label.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
+	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
 	detail_vbox.add_child(name_label)
 
 	# 角色类型
@@ -215,19 +238,19 @@ func _build_full_ui() -> void:
 	type_label.text = "类型"
 	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	type_label.add_theme_font_size_override("font_size", 14)
-	type_label.modulate = Color(0.6, 0.8, 1.0)
+	type_label.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
 	detail_vbox.add_child(type_label)
 
 	# 分隔线
-	var sep1 = HSeparator.new()
-	detail_vbox.add_child(sep1)
+	var sep2 = HSeparator.new()
+	detail_vbox.add_child(sep2)
 
 	# 角色描述
 	description_label = Label.new()
 	description_label.text = "角色描述"
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	description_label.add_theme_font_size_override("font_size", 13)
-	description_label.modulate = Color(0.7, 0.7, 0.7)
+	description_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
 	detail_vbox.add_child(description_label)
 
 	# 被动技能名称
@@ -242,12 +265,12 @@ func _build_full_ui() -> void:
 	passive_desc_label.text = "被动技能描述"
 	passive_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	passive_desc_label.add_theme_font_size_override("font_size", 12)
-	passive_desc_label.modulate = Color(0.6, 0.6, 0.6)
+	passive_desc_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	detail_vbox.add_child(passive_desc_label)
 
 	# 分隔线
-	var sep2 = HSeparator.new()
-	detail_vbox.add_child(sep2)
+	var sep3 = HSeparator.new()
+	detail_vbox.add_child(sep3)
 
 	# 解锁条件
 	unlock_condition_label = Label.new()
@@ -283,6 +306,8 @@ func _build_full_ui() -> void:
 	select_button.text = "选择角色"
 	select_button.custom_minimum_size = Vector2(120, 40)
 	btn_container.add_child(select_button)
+
+	print("[CharacterSelect] UI构建完成")
 
 
 ## 设置UI
@@ -395,84 +420,12 @@ func _create_default_character_cards() -> void:
 		select_character(default_characters[0]["id"])
 
 
-## 创建默认角色卡片
-func _create_default_card(char_data: Dictionary) -> Control:
-	"""创建一个简单的默认角色卡片"""
-	var card: Control = Control.new()
-	card.name = char_data["id"]
-	card.custom_minimum_size = Vector2(160, 200)
-
-	# 背景
-	var background: PanelContainer = PanelContainer.new()
-	background.name = "Background"
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.15, 0.15, 0.2, 0.95)
-	bg_style.border_color = Color(0.3, 0.3, 0.4)
-	bg_style.set_border_width_all(2)
-	bg_style.set_corner_radius_all(8)
-	background.add_theme_stylebox_override("panel", bg_style)
-	card.add_child(background)
-
-	# 内容容器
-	var content: VBoxContainer = VBoxContainer.new()
-	content.name = "Content"
-	content.set_anchors_preset(Control.PRESET_FULL_RECT)
-	content.add_theme_constant_override("separation", 8)
-	content.add_theme_constant_override("margin_left", 10)
-	content.add_theme_constant_override("margin_right", 10)
-	content.add_theme_constant_override("margin_top", 10)
-	content.add_theme_constant_override("margin_bottom", 10)
-	background.add_child(content)
-
-	# 角色图标占位
-	var icon_placeholder = ColorRect.new()
-	icon_placeholder.color = Color(0.3, 0.3, 0.4)
-	icon_placeholder.custom_minimum_size = Vector2(80, 80)
-	content.add_child(icon_placeholder)
-
-	# 角色名称
-	var name_lbl: Label = Label.new()
-	name_lbl.name = "NameLabel"
-	name_lbl.text = char_data["name"]
-	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 16)
-	name_lbl.add_theme_color_override("font_color", Color(0.95, 0.9, 0.75))
-	content.add_child(name_lbl)
-
-	# 角色类型
-	var type_lbl: Label = Label.new()
-	type_lbl.name = "TypeLabel"
-	type_lbl.text = char_data["type"]
-	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	type_lbl.add_theme_font_size_override("font_size", 12)
-	type_lbl.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
-	content.add_child(type_lbl)
-
-	# 描述
-	var desc_lbl: Label = Label.new()
-	desc_lbl.name = "DescLabel"
-	desc_lbl.text = char_data["description"]
-	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
-	desc_lbl.add_theme_font_size_override("font_size", 11)
-	desc_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
-	content.add_child(desc_lbl)
-
-	# 保存角色ID用于点击检测
-	card.set_meta("character_id", char_data["id"])
-
-	# 连接点击信号
-	card.gui_input.connect(_on_card_gui_input.bind(char_data["id"]))
-
-	return card
-
-
 ## 清除所有角色卡片
 func _clear_character_cards() -> void:
 	"""清除所有角色卡片"""
-	for child in card_container.get_children():
-		child.queue_free()
+	if card_container:
+		for child in card_container.get_children():
+			child.queue_free()
 	character_cards.clear()
 
 
@@ -612,7 +565,12 @@ func _update_card_selection() -> void:
 ## 更新详情面板
 func _update_detail_panel() -> void:
 	"""更新角色详情面板显示"""
-	if not _challenge_system or selected_character_id.is_empty():
+	if selected_character_id.is_empty():
+		return
+
+	# 如果没有ChallengeSystem，使用默认角色信息
+	if not _challenge_system:
+		_update_detail_panel_default()
 		return
 
 	var character: CharacterBase = _challenge_system.get_character(selected_character_id)
@@ -687,6 +645,41 @@ func _update_detail_panel() -> void:
 		select_button.text = "选择角色" if is_unlocked else "未解锁"
 
 
+## 更新详情面板（默认角色）
+func _update_detail_panel_default() -> void:
+	"""使用默认角色信息更新详情面板"""
+	# 默认角色数据
+	var default_data: Dictionary = {
+		"wandering_swordsman": {"name": "流浪剑客", "type": "近战", "desc": "使用剑术的流浪战士", "passive": "剑气", "passive_desc": "攻击附带剑气"},
+		"arcane_warlock": {"name": "奥术术士", "type": "法师", "desc": "操控奥术能量的术士", "passive": "奥术共鸣", "passive_desc": "增加奥术技能伤害"},
+		"berserker": {"name": "狂战士", "type": "近战", "desc": "无畏的战场杀戮者", "passive": "狂暴", "passive_desc": "低血量时增加攻击力"},
+		"elemental_mage": {"name": "元素法师", "type": "法师", "desc": "掌控元素的法师", "passive": "元素掌握", "passive_desc": "元素技能伤害提升"},
+	}
+
+	if not default_data.has(selected_character_id):
+		return
+
+	var data: Dictionary = default_data[selected_character_id]
+
+	# 更新基本信息
+	if name_label:
+		name_label.text = data["name"]
+	if type_label:
+		type_label.text = data["type"]
+	if description_label:
+		description_label.text = data["desc"]
+	if passive_name_label:
+		passive_name_label.text = "被动: " + data["passive"]
+	if passive_desc_label:
+		passive_desc_label.text = data["passive_desc"]
+	if unlock_condition_label:
+		unlock_condition_label.text = "已解锁"
+		unlock_condition_label.add_theme_color_override("font_color", Color.GREEN)
+	if select_button:
+		select_button.disabled = false
+		select_button.text = "选择角色"
+
+
 ## 更新属性显示
 func _update_stats_display(character: CharacterBase) -> void:
 	"""更新角色属性显示"""
@@ -702,7 +695,7 @@ func _update_stats_display(character: CharacterBase) -> void:
 		{"name": "生命", "value": character.base_health, "rating": character.get_stat_rating("health")},
 		{"name": "攻击", "value": character.base_attack, "rating": character.get_stat_rating("attack")},
 		{"name": "防御", "value": character.base_defense, "rating": character.get_stat_rating("defense")},
-		{"name": "速度", "value": character.base_speed, "rating": character.get_stat_rating("speed")}
+		{"name": "速度", "value": character.base_speed, "rating": character.get_stat_rating("speed")},
 	]
 
 	for stat in stats:
@@ -923,3 +916,76 @@ func set_selected_character(char_id: String) -> void:
 func refresh_all_characters() -> void:
 	"""刷新所有角色卡片"""
 	_initialize_character_grid()
+
+
+## 创建默认角色卡片
+func _create_default_card(char_data: Dictionary) -> Control:
+	"""创建一个简单的默认角色卡片"""
+	var card: Control = Control.new()
+	card.name = char_data["id"]
+	card.custom_minimum_size = Vector2(160, 200)
+
+	# 背景
+	var background: PanelContainer = PanelContainer.new()
+	background.name = "Background"
+	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var bg_style = StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.18, 0.18, 0.25, 1.0)
+	bg_style.border_color = Color(0.4, 0.4, 0.5)
+	bg_style.set_border_width_all(2)
+	bg_style.set_corner_radius_all(8)
+	background.add_theme_stylebox_override("panel", bg_style)
+	card.add_child(background)
+
+	# 内容容器
+	var content: VBoxContainer = VBoxContainer.new()
+	content.name = "Content"
+	content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content.add_theme_constant_override("separation", 8)
+	content.add_theme_constant_override("margin_left", 10)
+	content.add_theme_constant_override("margin_right", 10)
+	content.add_theme_constant_override("margin_top", 10)
+	content.add_theme_constant_override("margin_bottom", 10)
+	background.add_child(content)
+
+	# 角色图标占位
+	var icon_placeholder = ColorRect.new()
+	icon_placeholder.color = Color(0.3, 0.3, 0.4)
+	icon_placeholder.custom_minimum_size = Vector2(80, 80)
+	content.add_child(icon_placeholder)
+
+	# 角色名称
+	var name_lbl: Label = Label.new()
+	name_lbl.name = "NameLabel"
+	name_lbl.text = char_data["name"]
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_lbl.add_theme_font_size_override("font_size", 16)
+	name_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
+	content.add_child(name_lbl)
+
+	# 角色类型
+	var type_lbl: Label = Label.new()
+	type_lbl.name = "TypeLabel"
+	type_lbl.text = char_data["type"]
+	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	type_lbl.add_theme_font_size_override("font_size", 12)
+	type_lbl.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
+	content.add_child(type_lbl)
+
+	# 描述
+	var desc_lbl: Label = Label.new()
+	desc_lbl.name = "DescLabel"
+	desc_lbl.text = char_data["description"]
+	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
+	desc_lbl.add_theme_font_size_override("font_size", 11)
+	desc_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	content.add_child(desc_lbl)
+
+	# 保存角色ID用于点击检测
+	card.set_meta("character_id", char_data["id"])
+
+	# 连接点击信号
+	card.gui_input.connect(_on_card_gui_input.bind(char_data["id"]))
+
+	return card
