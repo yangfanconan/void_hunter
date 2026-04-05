@@ -4,7 +4,7 @@
 ## @version: 1.0.0
 
 extends Node
-class_name ChallengeSystem
+class_name ChallengeSystemSingleton
 
 # =============================================================================
 # 信号定义
@@ -180,32 +180,30 @@ func _initialize_system() -> void:
 
 
 func _load_all_characters() -> void:
-	"""加载所有角色定义"""
-	var character_scripts: Array = [
-		{"id": "wandering_swordsman", "path": "res://src/characters/characters/wandering_swordsman.gd"},
-		{"id": "shadow_assassin", "path": "res://src/characters/characters/shadow_assassin.gd"},
-		{"id": "holy_knight", "path": "res://src/characters/characters/holy_knight.gd"},
-		{"id": "elemental_mage", "path": "res://src/characters/characters/elemental_mage.gd"},
-		{"id": "berserker", "path": "res://src/characters/characters/berserker.gd"},
-		{"id": "mechanic", "path": "res://src/characters/characters/mechanic.gd"},
-		{"id": "time_walker", "path": "res://src/characters/characters/time_walker.gd"},
-		{"id": "void_hunter", "path": "res://src/characters/characters/void_hunter.gd"},
-		{"id": "void_reaper", "path": "res://src/characters/characters/void_reaper.gd"},
-		{"id": "arcane_warlock", "path": "res://src/characters/characters/arcane_warlock.gd"},
-		{"id": "dragon_sage", "path": "res://src/characters/characters/dragon_sage.gd"},
-		{"id": "frost_witch", "path": "res://src/characters/characters/frost_witch.gd"},
-		{"id": "holy_paladin", "path": "res://src/characters/characters/holy_paladin.gd"},
-		{"id": "mech_engineer", "path": "res://src/characters/characters/mech_engineer.gd"},
-		{"id": "night_ranger", "path": "res://src/characters/characters/night_ranger.gd"},
-		{"id": "thunder_lord", "path": "res://src/characters/characters/thunder_lord.gd"}
-	]
+	"""加载所有角色定义（使用内置数据）"""
+	var all_characters: Dictionary = {
+		"wandering_swordsman": {"name": "流浪剑客", "type": "melee", "health": 100, "mana": 50, "attack": 15, "defense": 5, "speed": 200},
+		"arcane_warlock": {"name": "奥术术士", "type": "mage", "health": 80, "mana": 100, "attack": 20, "defense": 3, "speed": 180},
+		"berserker": {"name": "狂战士", "type": "melee", "health": 150, "mana": 30, "attack": 20, "defense": 3, "speed": 220},
+		"elemental_mage": {"name": "元素法师", "type": "mage", "health": 70, "mana": 120, "attack": 18, "defense": 2, "speed": 170},
+		"frost_witch": {"name": "冰霜女巫", "type": "mage", "health": 75, "mana": 90, "attack": 18, "defense": 4, "speed": 175},
+		"holy_knight": {"name": "圣骑士", "type": "tank", "health": 130, "mana": 40, "attack": 12, "defense": 8, "speed": 160},
+		"holy_paladin": {"name": "神圣圣骑", "type": "tank", "health": 140, "mana": 50, "attack": 14, "defense": 9, "speed": 155},
+		"mech_engineer": {"name": "机械工程师", "type": "ranged", "health": 85, "mana": 60, "attack": 16, "defense": 4, "speed": 190},
+		"mechanic": {"name": "机械师", "type": "ranged", "health": 90, "mana": 55, "attack": 17, "defense": 5, "speed": 185},
+		"night_ranger": {"name": "暗夜游侠", "type": "ranged", "health": 80, "mana": 45, "attack": 22, "defense": 3, "speed": 210},
+		"shadow_assassin": {"name": "暗影刺客", "type": "assassin", "health": 70, "mana": 35, "attack": 25, "defense": 2, "speed": 240},
+		"thunder_lord": {"name": "雷霆领主", "type": "mage", "health": 85, "mana": 80, "attack": 19, "defense": 4, "speed": 180},
+		"time_walker": {"name": "时间行者", "type": "assassin", "health": 75, "mana": 70, "attack": 20, "defense": 3, "speed": 200},
+		"void_hunter": {"name": "虚空猎人", "type": "ranged", "health": 85, "mana": 50, "attack": 21, "defense": 4, "speed": 195},
+		"void_reaper": {"name": "虚空收割者", "type": "assassin", "health": 65, "mana": 40, "attack": 28, "defense": 2, "speed": 250},
+		"dragon_sage": {"name": "龙之贤者", "type": "mage", "health": 95, "mana": 85, "attack": 17, "defense": 5, "speed": 175},
+	}
 
-	for char_info in character_scripts:
-		var script: Resource = load(char_info.path)
-		if script:
-			var character = script.new()
-			_characters[char_info.id] = character
-			character_data[char_info.id] = character.to_dictionary()
+	for char_id in all_characters:
+		character_data[char_id] = all_characters[char_id]
+		# 默认所有角色已解锁
+		unlocked_characters.append(char_id)
 
 
 func _initialize_character_clear_counts() -> void:

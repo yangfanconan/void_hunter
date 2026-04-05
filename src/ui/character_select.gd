@@ -105,7 +105,7 @@ var is_showing_unlock_animation: bool = false
 # 私有变量
 # =============================================================================
 
-var _challenge_system: ChallengeSystem = null
+var _challenge_system: Node = null
 var _tween: Tween = null
 
 # =============================================================================
@@ -119,8 +119,8 @@ func _ready() -> void:
 
 
 func _enter_tree() -> void:
-	# 获取挑战系统引用
-	_challenge_system = ChallengeSystem.get_instance()
+	# 获取挑战系统引用 (autoload单例)
+	_challenge_system = get_node_or_null("/root/ChallengeSystem")
 	if _challenge_system:
 		_connect_challenge_signals()
 
@@ -410,7 +410,7 @@ func _initialize_character_grid() -> void:
 		return
 
 	# 尝试获取 ChallengeSystem
-	_challenge_system = ChallengeSystem.get_instance()
+	_challenge_system = get_node_or_null("/root/ChallengeSystem")
 
 	if not _challenge_system:
 		print("[CharacterSelect] ChallengeSystem 未找到，使用默认角色列表")

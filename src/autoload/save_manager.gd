@@ -273,3 +273,40 @@ func load_growth_data() -> Dictionary:
 		return json.data
 
 	return {}
+
+
+# =============================================================================
+# 公共方法 - 角色解锁存档
+# =============================================================================
+
+const UNLOCK_PATH := "user://unlock_data.dat"
+
+## 保存角色解锁数据
+func save_unlock_data(data: Dictionary) -> bool:
+	var file := FileAccess.open(UNLOCK_PATH, FileAccess.WRITE)
+	if file == null:
+		push_error("[SaveManager] 无法保存解锁数据")
+		return false
+	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+	return true
+
+
+## 加载角色解锁数据
+func load_unlock_data() -> Dictionary:
+	if not FileAccess.file_exists(UNLOCK_PATH):
+		return {}
+
+	var file := FileAccess.open(UNLOCK_PATH, FileAccess.READ)
+	if file == null:
+		push_error("[SaveManager] 无法读取解锁数据")
+		return {}
+
+	var json_string := file.get_as_text()
+	file.close()
+
+	var json := JSON.new()
+	if json.parse(json_string) == OK:
+		return json.data
+
+	return {}

@@ -32,6 +32,7 @@ AnimationManager="*res://src/autoload/animation_manager.gd"
 VFXManager="*res://src/autoload/vfx_manager.gd"
 AchievementManager="*res://src/autoload/achievement_manager.gd"
 LeaderboardManager="*res://src/autoload/leaderboard_manager.gd"
+ChallengeSystem="*res://src/characters/challenge_system.gd"
 PermanentGrowth="*res://src/systems/permanent_growth_system.gd"
 
 [display]
