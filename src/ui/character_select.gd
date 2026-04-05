@@ -562,20 +562,41 @@ func select_character(char_id: String) -> void:
 func _update_card_selection() -> void:
 	"""更新所有卡片的选中视觉效果"""
 	for char_id in character_cards:
-		var card: Control = character_cards[char_id]
-		var background: PanelContainer = card.get_node_or_null("Background")
+		var card: Button = character_cards[char_id]
+		if card == null:
+			continue
 
-		if background:
-			var style: StyleBoxFlat = StyleBoxFlat.new()
-			if char_id == selected_character_id:
-				style.bg_color = Color(0.3, 0.5, 0.8, 1.0)
-				style.border_color = Color(0.5, 0.8, 1.0)
-				style.set_border_width_all(3)
-			else:
-				style.bg_color = Color(0.2, 0.2, 0.2, 0.8)
-				style.set_border_width_all(0)
+		# 创建选中/未选中样式
+		var style: StyleBoxFlat = StyleBoxFlat.new()
+		style.set_corner_radius_all(10)
 
-			background.add_theme_stylebox_override("panel", style)
+		if char_id == selected_character_id:
+			# 选中状态 - 明亮的蓝色边框
+			style.bg_color = Color(0.3, 0.45, 0.65, 1.0)
+			style.border_color = Color(0.5, 0.9, 1.0)
+			style.set_border_width_all(4)
+		else:
+			# 未选中状态
+			style.bg_color = Color(0.15, 0.15, 0.25, 1.0)
+			style.border_color = Color(0.4, 0.4, 0.6)
+			style.set_border_width_all(2)
+
+		card.add_theme_stylebox_override("normal", style)
+
+		# 同时更新hover样式
+		var hover_style: StyleBoxFlat = StyleBoxFlat.new()
+		hover_style.set_corner_radius_all(10)
+		if char_id == selected_character_id:
+			hover_style.bg_color = Color(0.35, 0.5, 0.7, 1.0)
+			hover_style.border_color = Color(0.6, 1.0, 1.0)
+			hover_style.set_border_width_all(4)
+		else:
+			hover_style.bg_color = Color(0.2, 0.2, 0.3, 1.0)
+			hover_style.border_color = Color(0.6, 0.6, 0.8)
+			hover_style.set_border_width_all(3)
+		card.add_theme_stylebox_override("hover", hover_style)
+
+	print("[CharacterSelect] 更新选中状态: %s" % selected_character_id)
 
 
 ## 更新详情面板
@@ -948,105 +969,109 @@ func refresh_all_characters() -> void:
 
 ## 创建默认角色卡片
 func _create_default_card(char_data: Dictionary) -> Control:
-	"""创建一个简单的默认角色卡片"""
-	var card: Control = Control.new()
+	"""创建一个简单的默认角色卡片 - 使用Button确保可点击"""
+	var card := Button.new()
 	card.name = char_data["id"]
 	card.custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 
-	# 背景
-	var background: PanelContainer = PanelContainer.new()
-	background.name = "Background"
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.2, 0.2, 0.3, 1.0)
-	bg_style.border_color = Color(0.5, 0.5, 0.7)
-	bg_style.set_border_width_all(2)
-	bg_style.set_corner_radius_all(10)
-	background.add_theme_stylebox_override("panel", bg_style)
-	card.add_child(background)
+	# 按钮样式 - 正常状态
+	var normal_style = StyleBoxFlat.new()
+	normal_style.bg_color = Color(0.15, 0.15, 0.25, 1.0)
+	normal_style.border_color = Color(0.4, 0.4, 0.6)
+	normal_style.set_border_width_all(2)
+	normal_style.set_corner_radius_all(10)
+	card.add_theme_stylebox_override("normal", normal_style)
 
-	# 内容容器
-	var content: VBoxContainer = VBoxContainer.new()
-	content.name = "Content"
-	content.set_anchors_preset(Control.PRESET_FULL_RECT)
-	content.add_theme_constant_override("separation", 6)
-	content.add_theme_constant_override("margin_left", 8)
-	content.add_theme_constant_override("margin_right", 8)
-	content.add_theme_constant_override("margin_top", 8)
-	content.add_theme_constant_override("margin_bottom", 8)
-	content.mouse_filter = Control.MOUSE_FILTER_IGNORE  # 让点击传递到卡片
-	background.add_child(content)
+	# 按钮样式 - 悬停状态
+	var hover_style = StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.25, 0.25, 0.35, 1.0)
+	hover_style.border_color = Color(0.6, 0.6, 0.8)
+	hover_style.set_border_width_all(3)
+	hover_style.set_corner_radius_all(10)
+	card.add_theme_stylebox_override("hover", hover_style)
 
-	# 角色图标 - 使用SpriteManager获取玩家精灵
-	var icon_rect = TextureRect.new()
-	icon_rect.name = "IconRect"
-	icon_rect.custom_minimum_size = Vector2(64, 64)
-	icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	# 按钮样式 - 按下状态
+	var pressed_style = StyleBoxFlat.new()
+	pressed_style.bg_color = Color(0.3, 0.5, 0.7, 1.0)
+	pressed_style.border_color = Color(0.5, 0.8, 1.0)
+	pressed_style.set_border_width_all(3)
+	pressed_style.set_corner_radius_all(10)
+	card.add_theme_stylebox_override("pressed", pressed_style)
+
+	# 构建按钮内容
+	var content := VBoxContainer.new()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 4)
+	card.add_child(content)
+
+	# 角色图标区域
+	var icon_container := CenterContainer.new()
+	icon_container.custom_minimum_size.y = 64
+	content.add_child(icon_container)
 
 	# 尝试从SpriteManager获取角色头像
 	var sprite_mgr = _get_sprite_manager()
-	var has_texture := false
-	if sprite_mgr:
-		var portrait = sprite_mgr.get_character_portrait(char_data["id"])
-		if portrait:
-			icon_rect.texture = portrait
-			has_texture = true
-		else:
-			# 后备：使用玩家精灵的第一帧
-			var player_frame = sprite_mgr.get_player_frame(0)
-			if player_frame:
-				icon_rect.texture = player_frame
-				has_texture = true
+	var icon_texture: ImageTexture = null
 
-	if has_texture:
-		content.add_child(icon_rect)
+	if sprite_mgr:
+		icon_texture = sprite_mgr.get_character_portrait(char_data["id"])
+		if icon_texture == null:
+			icon_texture = sprite_mgr.get_player_frame(0)
+
+	if icon_texture:
+		var icon_rect := TextureRect.new()
+		icon_rect.texture = icon_texture
+		icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.custom_minimum_size = Vector2(56, 56)
+		icon_container.add_child(icon_rect)
 	else:
-		# 没有纹理时使用颜色占位符
-		var icon_placeholder = ColorRect.new()
-		icon_placeholder.color = _get_character_color(char_data["type"])
-		icon_placeholder.custom_minimum_size = Vector2(64, 64)
-		content.add_child(icon_placeholder)
+		# 使用颜色占位符
+		var placeholder := ColorRect.new()
+		placeholder.color = _get_character_color(char_data["type"])
+		placeholder.custom_minimum_size = Vector2(56, 56)
+		placeholder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		icon_container.add_child(placeholder)
 
 	# 角色名称
-	var name_lbl: Label = Label.new()
-	name_lbl.name = "NameLabel"
+	var name_lbl := Label.new()
 	name_lbl.text = char_data["name"]
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 14)
+	name_lbl.add_theme_font_size_override("font_size", 13)
 	name_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 	content.add_child(name_lbl)
 
-	# 角色类型
-	var type_lbl: Label = Label.new()
-	type_lbl.name = "TypeLabel"
+	# 角色类型标签
+	var type_lbl := Label.new()
 	type_lbl.text = char_data["type"]
 	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	type_lbl.add_theme_font_size_override("font_size", 11)
-	type_lbl.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
+	type_lbl.add_theme_color_override("font_color", _get_character_color(char_data["type"]))
 	content.add_child(type_lbl)
 
-	# 描述
-	var desc_lbl: Label = Label.new()
-	desc_lbl.name = "DescLabel"
+	# 简短描述
+	var desc_lbl := Label.new()
 	desc_lbl.text = char_data["description"]
 	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
-	desc_lbl.add_theme_font_size_override("font_size", 11)
-	desc_lbl.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	desc_lbl.add_theme_font_size_override("font_size", 10)
+	desc_lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	content.add_child(desc_lbl)
 
-	# 保存角色ID用于点击检测
+	# 保存角色ID
 	card.set_meta("character_id", char_data["id"])
 
-	# 设置所有子控件的鼠标过滤为忽略，让点击事件传递到卡片
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.mouse_filter = Control.MOUSE_FILTER_STOP  # 卡片本身接收点击
-
-	# 连接点击信号
-	card.gui_input.connect(_on_card_gui_input.bind(char_data["id"]))
+	# 连接点击信号 - Button的pressed信号更可靠
+	card.pressed.connect(_on_card_pressed.bind(char_data["id"]))
 
 	return card
+
+
+## 卡片按钮点击回调
+func _on_card_pressed(char_id: String) -> void:
+	"""卡片按钮被点击"""
+	print("[CharacterSelect] 点击卡片: %s" % char_id)
+	select_character(char_id)
 
 
 ## 获取SpriteManager
