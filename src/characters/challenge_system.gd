@@ -109,7 +109,7 @@ var character_clear_counts: Dictionary = {}
 var current_character_id: String = "wandering_swordsman"
 
 ## 已解锁的角色ID列表
-var unlocked_characters: Array[String] = ["wandering_swordsman"]
+var unlocked_characters: Array[String] = []
 
 ## 角色数据缓存
 var character_data: Dictionary = {}
@@ -180,7 +180,7 @@ func _initialize_system() -> void:
 
 
 func _load_all_characters() -> void:
-	"""加载所有角色定义（使用内置数据）"""
+	"""加载所有角色定义（使用内置数据创建CharacterBase对象）"""
 	var all_characters: Dictionary = {
 		"wandering_swordsman": {"name": "流浪剑客", "type": "melee", "health": 100, "mana": 50, "attack": 15, "defense": 5, "speed": 200},
 		"arcane_warlock": {"name": "奥术术士", "type": "mage", "health": 80, "mana": 100, "attack": 20, "defense": 3, "speed": 180},
@@ -201,9 +201,25 @@ func _load_all_characters() -> void:
 	}
 
 	for char_id in all_characters:
-		character_data[char_id] = all_characters[char_id]
+		var data = all_characters[char_id]
+		character_data[char_id] = data
+
+		# 创建 CharacterBase 对象
+		var character := CharacterBase.new()
+		character.character_id = char_id
+		character.character_name = data.get("name", char_id)
+		character.base_health = data.get("health", 100)
+		character.base_mana = data.get("mana", 50)
+		character.base_attack = data.get("attack", 15)
+		character.base_defense = data.get("defense", 5)
+		character.base_speed = data.get("speed", 200)
+		character.is_unlocked = true
+		character.is_default_unlocked = true
+		_characters[char_id] = character
+
 		# 默认所有角色已解锁
-		unlocked_characters.append(char_id)
+		if char_id not in unlocked_characters:
+			unlocked_characters.append(char_id)
 
 
 func _initialize_character_clear_counts() -> void:
@@ -484,7 +500,7 @@ func get_all_characters() -> Array:
 	获取所有角色列表
 	@return: 角色ID数组
 	"""
-	return _characters.keys()
+	return character_data.keys()
 
 
 ## 获取已解锁角色列表
