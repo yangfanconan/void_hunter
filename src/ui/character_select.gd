@@ -21,13 +21,17 @@ signal back_pressed()
 # =============================================================================
 
 ## 每行显示的角色数量
-const CHARACTERS_PER_ROW: int = 4
+const CHARACTERS_PER_ROW: int = 5
 
 ## 卡片间距
-const CARD_SPACING: int = 20
+const CARD_SPACING: int = 12
 
 ## 动画持续时间
 const ANIMATION_DURATION: float = 0.3
+
+## 卡片尺寸
+const CARD_WIDTH: int = 140
+const CARD_HEIGHT: int = 180
 
 # =============================================================================
 # 导出变量
@@ -398,12 +402,24 @@ func _create_default_character_cards() -> void:
 	# 清除现有卡片
 	_clear_character_cards()
 
-	# 默认角色列表
+	# 默认角色列表（全部16个角色）
 	var default_characters: Array = [
 		{"id": "wandering_swordsman", "name": "流浪剑客", "type": "近战", "description": "使用剑术的流浪战士"},
 		{"id": "arcane_warlock", "name": "奥术术士", "type": "法师", "description": "操控奥术能量的术士"},
 		{"id": "berserker", "name": "狂战士", "type": "近战", "description": "无畏的战场杀戮者"},
 		{"id": "elemental_mage", "name": "元素法师", "type": "法师", "description": "掌控元素的法师"},
+		{"id": "frost_witch", "name": "冰霜女巫", "type": "法师", "description": "操控冰霜之力的女巫"},
+		{"id": "holy_knight", "name": "圣骑士", "type": "近战", "description": "信仰神圣的骑士"},
+		{"id": "holy_paladin", "name": "神圣圣骑", "type": "坦克", "description": "守护正义的圣骑"},
+		{"id": "mech_engineer", "name": "机械工程师", "type": "远程", "description": "使用机械装置战斗"},
+		{"id": "mechanic", "name": "机械师", "type": "远程", "description": "精通机械的技术员"},
+		{"id": "night_ranger", "name": "暗夜游侠", "type": "远程", "description": "暗夜中的狩猎者"},
+		{"id": "shadow_assassin", "name": "暗影刺客", "type": "刺客", "description": "来自暗影的杀手"},
+		{"id": "thunder_lord", "name": "雷霆领主", "type": "法师", "description": "掌控雷电之力"},
+		{"id": "time_walker", "name": "时间行者", "type": "法师", "description": "操控时间的神秘者"},
+		{"id": "void_hunter", "name": "虚空猎人", "type": "近战", "description": "猎杀虚空生物"},
+		{"id": "void_reaper", "name": "虚空收割者", "type": "刺客", "description": "收割虚空的灵魂"},
+		{"id": "dragon_sage", "name": "龙之贤者", "type": "法师", "description": "龙族智慧的传承者"},
 	]
 
 	print("[CharacterSelect] 创建 %d 个默认角色卡片" % default_characters.size())
@@ -648,12 +664,24 @@ func _update_detail_panel() -> void:
 ## 更新详情面板（默认角色）
 func _update_detail_panel_default() -> void:
 	"""使用默认角色信息更新详情面板"""
-	# 默认角色数据
+	# 默认角色数据（全部16个角色）
 	var default_data: Dictionary = {
-		"wandering_swordsman": {"name": "流浪剑客", "type": "近战", "desc": "使用剑术的流浪战士", "passive": "剑气", "passive_desc": "攻击附带剑气"},
-		"arcane_warlock": {"name": "奥术术士", "type": "法师", "desc": "操控奥术能量的术士", "passive": "奥术共鸣", "passive_desc": "增加奥术技能伤害"},
+		"wandering_swordsman": {"name": "流浪剑客", "type": "近战", "desc": "使用剑术的流浪战士", "passive": "剑气", "passive_desc": "攻击附带剑气，增加攻击范围"},
+		"arcane_warlock": {"name": "奥术术士", "type": "法师", "desc": "操控奥术能量的术士", "passive": "奥术共鸣", "passive_desc": "增加奥术技能伤害15%"},
 		"berserker": {"name": "狂战士", "type": "近战", "desc": "无畏的战场杀戮者", "passive": "狂暴", "passive_desc": "低血量时增加攻击力"},
-		"elemental_mage": {"name": "元素法师", "type": "法师", "desc": "掌控元素的法师", "passive": "元素掌握", "passive_desc": "元素技能伤害提升"},
+		"elemental_mage": {"name": "元素法师", "type": "法师", "desc": "掌控元素的法师", "passive": "元素掌握", "passive_desc": "元素技能伤害提升10%"},
+		"frost_witch": {"name": "冰霜女巫", "type": "法师", "desc": "操控冰霜之力的女巫", "passive": "冰霜之心", "passive_desc": "冰霜技能有概率冻结敌人"},
+		"holy_knight": {"name": "圣骑士", "type": "近战", "desc": "信仰神圣的骑士", "passive": "神圣护盾", "passive_desc": "受到致命伤害时获得护盾"},
+		"holy_paladin": {"name": "神圣圣骑", "type": "坦克", "desc": "守护正义的圣骑", "passive": "圣光庇护", "passive_desc": "增加队友防御力"},
+		"mech_engineer": {"name": "机械工程师", "type": "远程", "desc": "使用机械装置战斗", "passive": "机械精通", "passive_desc": "炮台和机关伤害提升"},
+		"mechanic": {"name": "机械师", "type": "远程", "desc": "精通机械的技术员", "passive": "快速修理", "passive_desc": "机械单位修复速度加快"},
+		"night_ranger": {"name": "暗夜游侠", "type": "远程", "desc": "暗夜中的狩猎者", "passive": "暗夜猎手", "passive_desc": "夜间或暗处攻击力提升"},
+		"shadow_assassin": {"name": "暗影刺客", "type": "刺客", "desc": "来自暗影的杀手", "passive": "暗影步", "passive_desc": "闪避后提升移动速度"},
+		"thunder_lord": {"name": "雷霆领主", "type": "法师", "desc": "掌控雷电之力", "passive": "雷霆之力", "passive_desc": "雷电技能有连锁效果"},
+		"time_walker": {"name": "时间行者", "type": "法师", "desc": "操控时间的神秘者", "passive": "时间扭曲", "passive_desc": "技能冷却减少10%"},
+		"void_hunter": {"name": "虚空猎人", "type": "近战", "desc": "猎杀虚空生物", "passive": "虚空之眼", "passive_desc": "对虚空生物伤害提升"},
+		"void_reaper": {"name": "虚空收割者", "type": "刺客", "desc": "收割虚空的灵魂", "passive": "灵魂收割", "passive_desc": "击杀敌人恢复生命值"},
+		"dragon_sage": {"name": "龙之贤者", "type": "法师", "desc": "龙族智慧的传承者", "passive": "龙血", "passive_desc": "最大生命值和法力值提升"},
 	}
 
 	if not default_data.has(selected_character_id):
@@ -923,17 +951,17 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	"""创建一个简单的默认角色卡片"""
 	var card: Control = Control.new()
 	card.name = char_data["id"]
-	card.custom_minimum_size = Vector2(160, 200)
+	card.custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 
 	# 背景
 	var background: PanelContainer = PanelContainer.new()
 	background.name = "Background"
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0.18, 0.18, 0.25, 1.0)
-	bg_style.border_color = Color(0.4, 0.4, 0.5)
+	bg_style.bg_color = Color(0.2, 0.2, 0.3, 1.0)
+	bg_style.border_color = Color(0.5, 0.5, 0.7)
 	bg_style.set_border_width_all(2)
-	bg_style.set_corner_radius_all(8)
+	bg_style.set_corner_radius_all(10)
 	background.add_theme_stylebox_override("panel", bg_style)
 	card.add_child(background)
 
@@ -941,17 +969,17 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	var content: VBoxContainer = VBoxContainer.new()
 	content.name = "Content"
 	content.set_anchors_preset(Control.PRESET_FULL_RECT)
-	content.add_theme_constant_override("separation", 8)
-	content.add_theme_constant_override("margin_left", 10)
-	content.add_theme_constant_override("margin_right", 10)
-	content.add_theme_constant_override("margin_top", 10)
-	content.add_theme_constant_override("margin_bottom", 10)
+	content.add_theme_constant_override("separation", 6)
+	content.add_theme_constant_override("margin_left", 8)
+	content.add_theme_constant_override("margin_right", 8)
+	content.add_theme_constant_override("margin_top", 8)
+	content.add_theme_constant_override("margin_bottom", 8)
 	background.add_child(content)
 
 	# 角色图标占位
 	var icon_placeholder = ColorRect.new()
-	icon_placeholder.color = Color(0.3, 0.3, 0.4)
-	icon_placeholder.custom_minimum_size = Vector2(80, 80)
+	icon_placeholder.color = Color(0.35, 0.35, 0.5)
+	icon_placeholder.custom_minimum_size = Vector2(60, 60)
 	content.add_child(icon_placeholder)
 
 	# 角色名称
@@ -959,8 +987,8 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	name_lbl.name = "NameLabel"
 	name_lbl.text = char_data["name"]
 	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_lbl.add_theme_font_size_override("font_size", 16)
-	name_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
+	name_lbl.add_theme_font_size_override("font_size", 14)
+	name_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 	content.add_child(name_lbl)
 
 	# 角色类型
@@ -968,7 +996,7 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	type_lbl.name = "TypeLabel"
 	type_lbl.text = char_data["type"]
 	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	type_lbl.add_theme_font_size_override("font_size", 12)
+	type_lbl.add_theme_font_size_override("font_size", 11)
 	type_lbl.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
 	content.add_child(type_lbl)
 
