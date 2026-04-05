@@ -974,6 +974,7 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	content.add_theme_constant_override("margin_right", 8)
 	content.add_theme_constant_override("margin_top", 8)
 	content.add_theme_constant_override("margin_bottom", 8)
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE  # 让点击传递到卡片
 	background.add_child(content)
 
 	# 角色图标 - 使用SpriteManager获取玩家精灵
@@ -1037,6 +1038,10 @@ func _create_default_card(char_data: Dictionary) -> Control:
 
 	# 保存角色ID用于点击检测
 	card.set_meta("character_id", char_data["id"])
+
+	# 设置所有子控件的鼠标过滤为忽略，让点击事件传递到卡片
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.mouse_filter = Control.MOUSE_FILTER_STOP  # 卡片本身接收点击
 
 	# 连接点击信号
 	card.gui_input.connect(_on_card_gui_input.bind(char_data["id"]))
