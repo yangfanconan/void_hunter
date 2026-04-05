@@ -293,6 +293,15 @@ func _build_full_ui() -> void:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	detail_vbox.add_child(spacer)
 
+	# 操作提示
+	var hint_label = Label.new()
+	hint_label.text = "👆 点击左侧卡片选择，然后点击「选择角色」确认"
+	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	hint_label.add_theme_font_size_override("font_size", 12)
+	hint_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.5))
+	detail_vbox.add_child(hint_label)
+
 	# 按钮容器
 	var btn_container = HBoxContainer.new()
 	btn_container.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -302,13 +311,36 @@ func _build_full_ui() -> void:
 	# 返回按钮
 	back_button = Button.new()
 	back_button.text = "返回"
-	back_button.custom_minimum_size = Vector2(100, 40)
+	back_button.custom_minimum_size = Vector2(100, 45)
+	var back_style = StyleBoxFlat.new()
+	back_style.bg_color = Color(0.25, 0.25, 0.35, 1.0)
+	back_style.border_color = Color(0.5, 0.5, 0.6)
+	back_style.set_border_width_all(2)
+	back_style.set_corner_radius_all(8)
+	back_button.add_theme_stylebox_override("normal", back_style)
 	btn_container.add_child(back_button)
 
-	# 选择按钮
+	# 选择按钮 - 突出显示
 	select_button = Button.new()
 	select_button.text = "选择角色"
-	select_button.custom_minimum_size = Vector2(120, 40)
+	select_button.custom_minimum_size = Vector2(140, 50)
+	# 正常状态 - 明亮的绿色
+	var select_normal = StyleBoxFlat.new()
+	select_normal.bg_color = Color(0.2, 0.5, 0.3, 1.0)
+	select_normal.border_color = Color(0.3, 0.8, 0.5)
+	select_normal.set_border_width_all(3)
+	select_normal.set_corner_radius_all(10)
+	select_button.add_theme_stylebox_override("normal", select_normal)
+	# 悬停状态
+	var select_hover = StyleBoxFlat.new()
+	select_hover.bg_color = Color(0.3, 0.6, 0.4, 1.0)
+	select_hover.border_color = Color(0.5, 1.0, 0.7)
+	select_hover.set_border_width_all(3)
+	select_hover.set_corner_radius_all(10)
+	select_button.add_theme_stylebox_override("hover", select_hover)
+	select_button.add_theme_stylebox_override("pressed", select_hover)
+	select_button.add_theme_font_size_override("font_size", 16)
+	select_button.add_theme_color_override("font_color", Color.WHITE)
 	btn_container.add_child(select_button)
 
 	print("[CharacterSelect] UI构建完成")
@@ -331,9 +363,11 @@ func _connect_signals() -> void:
 	"""连接UI信号"""
 	if select_button:
 		select_button.pressed.connect(_on_select_button_pressed)
+		print("[CharacterSelect] 选择按钮信号已连接")
 
 	if back_button:
 		back_button.pressed.connect(_on_back_button_pressed)
+		print("[CharacterSelect] 返回按钮信号已连接")
 
 
 ## 连接挑战系统信号
@@ -727,6 +761,7 @@ func _update_detail_panel_default() -> void:
 	if select_button:
 		select_button.disabled = false
 		select_button.text = "选择角色"
+		print("[CharacterSelect] 选择按钮已启用，角色: %s" % selected_character_id)
 
 
 ## 更新属性显示
@@ -783,18 +818,29 @@ func _update_stats_display(character: CharacterBase) -> void:
 ## 选择按钮按下
 func _on_select_button_pressed() -> void:
 	"""选择按钮被按下"""
+	print("[CharacterSelect] 选择按钮按下, selected_character_id: %s" % selected_character_id)
+
 	if selected_character_id.is_empty():
+		print("[CharacterSelect] 错误: 未选择角色")
 		return
 
-	if _challenge_system and _challenge_system.is_character_unlocked(selected_character_id):
+	# 检查是否已解锁（如果有ChallengeSystem）或默认允许选择
+	var can_select := true
+	if _challenge_system:
+		can_select = _challenge_system.is_character_unlocked(selected_character_id)
+
+	if can_select:
 		# 播放选择音效
 		AudioManager.play_sfx("select")
 
 		# 发送选中信号
+		print("[CharacterSelect] 发送 character_selected 信号: %s" % selected_character_id)
 		character_selected.emit(selected_character_id)
 
 		# 播放选择动画
 		_play_select_animation()
+	else:
+		print("[CharacterSelect] 角色未解锁，无法选择")
 
 
 ## 返回按钮按下
