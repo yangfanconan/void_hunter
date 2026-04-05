@@ -133,10 +133,26 @@ func _load_image(path: String) -> Image:
 		print("[SpriteManager] 文件不存在: %s" % path)
 		return null
 
-	var img := Image.new()
-	var err := img.load(path)
-	if err != OK:
-		print("[SpriteManager] 加载失败: %s (错误: %d)" % [path, err])
+	# 使用 ResourceLoader.load() 加载已导入的资源（导出兼容）
+	var resource = load(path)
+	if resource == null:
+		print("[SpriteManager] 加载失败: %s" % path)
+		return null
+
+	var img: Image = null
+	if resource is Texture2D:
+		img = resource.get_image()
+	elif resource is Image:
+		img = resource
+	else:
+		# 后备：尝试直接加载（仅编辑器模式）
+		img = Image.new()
+		var err := img.load(path)
+		if err != OK:
+			print("[SpriteManager] 后备加载失败: %s (错误: %d)" % [path, err])
+			return null
+
+	if img == null:
 		return null
 
 	# 确保格式统一为 RGBA8
