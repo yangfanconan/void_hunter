@@ -449,7 +449,12 @@ func _spawn_player() -> void:
 	
 	# 连接玩家信号
 	_connect_player_signals()
-	
+
+	# 设置选择的角色
+	if player.has_method("set_character"):
+		player.set_character(_selected_character_id)
+		print("[Game] 玩家角色设置为: %s" % _selected_character_id)
+
 	print("[Game] 玩家已生成于: ", player.global_position)
 
 

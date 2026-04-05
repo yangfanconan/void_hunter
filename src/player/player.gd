@@ -18,6 +18,9 @@ const INVINCIBILITY_TIME: float = 0.5
 const SHOOT_COOLDOWN: float = 0.2
 const AUTO_SHOOT_RANGE: float = 500.0
 
+## 角色ID
+var character_id: String = "wandering_swordsman"
+
 @export var move_speed: float = BASE_MOVE_SPEED
 @export var bullet_damage: float = 15.0
 @export var bullet_speed: float = 600.0
@@ -75,22 +78,137 @@ var skill_manager: Node = null
 ## 技能快捷键槽位（最多4个）
 var skill_hotkeys: Array[String] = ["", "", "", ""]
 
+## 角色属性配置
+const CHARACTER_STATS := {
+	"wandering_swordsman": {
+		"name": "流浪剑客",
+		"health": 100, "mana": 50, "attack": 15, "defense": 5, "speed": 200,
+		"passive": "剑气", "passive_desc": "攻击附带剑气，增加攻击范围"
+	},
+	"arcane_warlock": {
+		"name": "奥术术士",
+		"health": 80, "mana": 100, "attack": 20, "defense": 3, "speed": 180,
+		"passive": "奥术共鸣", "passive_desc": "增加奥术技能伤害15%"
+	},
+	"berserker": {
+		"name": "狂战士",
+		"health": 150, "mana": 30, "attack": 20, "defense": 3, "speed": 220,
+		"passive": "狂暴", "passive_desc": "低血量时增加攻击力"
+	},
+	"elemental_mage": {
+		"name": "元素法师",
+		"health": 70, "mana": 120, "attack": 18, "defense": 2, "speed": 170,
+		"passive": "元素掌握", "passive_desc": "元素技能伤害提升10%"
+	},
+	"frost_witch": {
+		"name": "冰霜女巫",
+		"health": 75, "mana": 110, "attack": 16, "defense": 4, "speed": 175,
+		"passive": "冰霜之心", "passive_desc": "冰霜技能有概率冻结敌人"
+	},
+	"holy_knight": {
+		"name": "圣骑士",
+		"health": 120, "mana": 60, "attack": 12, "defense": 8, "speed": 190,
+		"passive": "神圣护盾", "passive_desc": "受到致命伤害时获得护盾"
+	},
+	"holy_paladin": {
+		"name": "神圣圣骑",
+		"health": 140, "mana": 50, "attack": 10, "defense": 10, "speed": 160,
+		"passive": "圣光庇护", "passive_desc": "增加队友防御力"
+	},
+	"mech_engineer": {
+		"name": "机械工程师",
+		"health": 90, "mana": 80, "attack": 14, "defense": 5, "speed": 185,
+		"passive": "机械精通", "passive_desc": "炮台和机关伤害提升"
+	},
+	"mechanic": {
+		"name": "机械师",
+		"health": 85, "mana": 90, "attack": 12, "defense": 6, "speed": 195,
+		"passive": "快速修理", "passive_desc": "机械单位修复速度加快"
+	},
+	"night_ranger": {
+		"name": "暗夜游侠",
+		"health": 80, "mana": 70, "attack": 18, "defense": 3, "speed": 230,
+		"passive": "暗夜猎手", "passive_desc": "夜间或暗处攻击力提升"
+	},
+	"shadow_assassin": {
+		"name": "暗影刺客",
+		"health": 70, "mana": 60, "attack": 22, "defense": 2, "speed": 250,
+		"passive": "暗影步", "passive_desc": "闪避后提升移动速度"
+	},
+	"thunder_lord": {
+		"name": "雷霆领主",
+		"health": 85, "mana": 100, "attack": 17, "defense": 4, "speed": 180,
+		"passive": "雷霆之力", "passive_desc": "雷电技能有连锁效果"
+	},
+	"time_walker": {
+		"name": "时间行者",
+		"health": 75, "mana": 90, "attack": 15, "defense": 4, "speed": 200,
+		"passive": "时间扭曲", "passive_desc": "技能冷却减少10%"
+	},
+	"void_hunter": {
+		"name": "虚空猎人",
+		"health": 95, "mana": 65, "attack": 16, "defense": 5, "speed": 210,
+		"passive": "虚空之眼", "passive_desc": "对虚空生物伤害提升"
+	},
+	"void_reaper": {
+		"name": "虚空收割者",
+		"health": 80, "mana": 55, "attack": 20, "defense": 3, "speed": 220,
+		"passive": "灵魂收割", "passive_desc": "击杀敌人恢复生命值"
+	},
+	"dragon_sage": {
+		"name": "龙之贤者",
+		"health": 110, "mana": 80, "attack": 14, "defense": 6, "speed": 175,
+		"passive": "龙血", "passive_desc": "最大生命值和法力值提升"
+	}
+}
+
 func _ready() -> void:
 	# 设置碰撞层（第1层 = 玩家层）
 	collision_layer = 1
 	collision_mask = 2 | 16  # 检测敌人(第2层)和障碍物(第5层)
-	
+
 	_ensure_collision()
 	_ensure_visual()
 	_find_projectiles_container()
 	_create_level_up_effect()
 	_init_skill_manager()  # 初始化技能管理器
 	add_to_group("players")
-	
+
+	# 应用角色属性
+	_apply_character_stats()
+
 	# 激活相机跟随
 	_activate_camera()
-	
-	print("[Player] 初始化完成")
+
+	print("[Player] 初始化完成, 角色: %s" % character_id)
+
+
+## 设置角色ID
+func set_character(id: String) -> void:
+	"""设置角色ID并应用属性"""
+	character_id = id
+	_apply_character_stats()
+	print("[Player] 设置角色: %s" % id)
+
+
+## 应用角色属性
+func _apply_character_stats() -> void:
+	"""根据角色ID应用属性"""
+	if not CHARACTER_STATS.has(character_id):
+		print("[Player] 未找到角色配置: %s, 使用默认属性" % character_id)
+		return
+
+	var stats = CHARACTER_STATS[character_id]
+	max_health = stats.get("health", 100)
+	current_health = max_health
+	max_mana = stats.get("mana", 50)
+	current_mana = max_mana
+	bullet_damage = stats.get("attack", 15)
+	move_speed = stats.get("speed", 200)
+
+	print("[Player] 应用角色属性: %s - HP:%d MP:%d ATK:%d SPD:%d" % [
+		stats.get("name", character_id), max_health, max_mana, bullet_damage, move_speed
+	])
 
 func _physics_process(delta: float) -> void:
 	_update_timers(delta)
