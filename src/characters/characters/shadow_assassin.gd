@@ -16,6 +16,8 @@ func _init() -> void:
 	character_name = "暗影刺客"
 	description = "来自暗影组织的精英刺客，擅长快速移动和致命一击，但也因此牺牲了防御。"
 	character_type = CharacterBase.CharacterType.HIGH_DPS
+	icon = load("res://assets/icons/characters/shadow_assassin.png")
+	portrait = load("res://assets/icons/characters/shadow_assassin.png")
 
 	# 基础属性 - 高攻速、高攻击、低防御
 	base_health = 70.0

@@ -41,6 +41,8 @@ func _init() -> void:
 	character_name = "夜行者"
 	description = "行走在黑暗边缘的刺客，以极速和闪避著称。每次闪避成功时自动反击周围敌人，连续闪避可触发暗夜之力。"
 	character_type = CharacterBase.CharacterType.HIGH_DPS
+	icon = load("res://assets/icons/characters/night_ranger.png")
+	portrait = load("res://assets/icons/characters/night_ranger.png")
 
 	# 基础属性 - 高速度高暴击，低生命低防御
 	base_health = 70.0

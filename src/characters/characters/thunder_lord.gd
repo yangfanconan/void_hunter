@@ -35,8 +35,10 @@ var _last_lightning_time: float = 0.0
 func _init() -> void:
 	character_id = "thunder_lord"
 	character_name = "雷霆之主"
-	description = "掌控雷电之力的战神，攻击可连锁击中多个敌人。闪电伤害+30%。连续触发闪电可进入雷暴模式。"
+	description = "掌控雷电之力的战神，攻击可连锁击中多个敌人。闪电伤害 +30%。连续触发闪电可进入雷暴模式。"
 	character_type = CharacterBase.CharacterType.BURST
+	icon = load("res://assets/icons/characters/thunder_lord.png")
+	portrait = load("res://assets/icons/characters/thunder_lord.png")
 
 	# 基础属性 - 高攻击高速度
 	base_health = 90.0

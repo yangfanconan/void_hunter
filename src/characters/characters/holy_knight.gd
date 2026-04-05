@@ -22,6 +22,8 @@ func _init() -> void:
 	character_name = "圣光骑士"
 	description = "圣光教团的守护骑士，身披神圣铠甲，誓死保护同伴。"
 	character_type = CharacterBase.CharacterType.DEFENSIVE
+	icon = load("res://assets/icons/characters/holy_knight.png")
+	portrait = load("res://assets/icons/characters/holy_knight.png")
 
 	# 基础属性 - 高生命、高防御、低速度
 	base_health = 150.0

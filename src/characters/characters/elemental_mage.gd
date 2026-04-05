@@ -16,6 +16,8 @@ func _init() -> void:
 	character_name = "元素法师"
 	description = "掌控元素之力的神秘法师，能够调动天地间的魔力为己所用。"
 	character_type = CharacterBase.CharacterType.MAGIC
+	icon = load("res://assets/icons/characters/elemental_mage.png")
+	portrait = load("res://assets/icons/characters/elemental_mage.png")
 
 	# 基础属性 - 低生命、低防御、高法力
 	base_health = 80.0

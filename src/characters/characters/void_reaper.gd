@@ -24,6 +24,8 @@ func _init() -> void:
 	character_name = "虚空收割者"
 	description = "在虚空中游走的灵魂猎手，均衡的全能战士。拥有虚空的庇护，死亡时有概率复活。"
 	character_type = CharacterBase.CharacterType.BALANCED
+	icon = load("res://assets/icons/characters/void_reaper.png")
+	portrait = load("res://assets/icons/characters/void_reaper.png")
 
 	# 基础属性 - 均衡型，无短板
 	base_health = 100.0

@@ -16,6 +16,8 @@ func _init() -> void:
 	character_name = "流浪剑客"
 	description = "一位经验丰富的流浪剑客，在不断的旅途中磨练出了精湛的剑术。"
 	character_type = CharacterBase.CharacterType.BALANCED
+	icon = load("res://assets/icons/characters/wandering_swordsman.png")
+	portrait = load("res://assets/icons/characters/wandering_swordsman.png")
 
 	# 基础属性
 	base_health = 100.0

@@ -23,6 +23,8 @@ func _init() -> void:
 	character_name = "狂战士"
 	description = "来自北方荒原的狂战士，以战斗为荣耀，越是危险越能激发他的战斗本能。"
 	character_type = CharacterBase.CharacterType.BURST
+	icon = load("res://assets/icons/characters/berserker.png")
+	portrait = load("res://assets/icons/characters/berserker.png")
 
 	# 基础属性 - 高生命、高攻击、零防御
 	base_health = 120.0

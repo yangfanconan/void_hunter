@@ -40,6 +40,8 @@ func _init() -> void:
 	character_name = "机械工程师"
 	description = "天才发明家，可部署炮台和召唤机械宠物辅助战斗。召唤物越多，自身越强。"
 	character_type = CharacterBase.CharacterType.SUMMONER
+	icon = load("res://assets/icons/characters/mech_engineer.png")
+	portrait = load("res://assets/icons/characters/mech_engineer.png")
 
 	# 基础属性 - 较低个人战斗力
 	base_health = 75.0

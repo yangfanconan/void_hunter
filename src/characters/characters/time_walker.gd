@@ -24,6 +24,8 @@ func _init() -> void:
 	character_name = "时空行者"
 	description = "来自未来时空的神秘旅者，掌握着操纵时间的禁忌力量。"
 	character_type = CharacterBase.CharacterType.CONTROL
+	icon = load("res://assets/icons/characters/time_walker.png")
+	portrait = load("res://assets/icons/characters/time_walker.png")
 
 	# 基础属性 - 均衡偏快
 	base_health = 85.0

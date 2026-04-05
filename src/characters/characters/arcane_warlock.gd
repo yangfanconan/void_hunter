@@ -35,6 +35,8 @@ func _init() -> void:
 	character_name = "奥术术士"
 	description = "掌握奥术奥秘的术士，以强大的魔法摧毁敌人。法力恢复快，技能伤害极高。连续施法可获得奥术充能加成。"
 	character_type = CharacterBase.CharacterType.MAGIC
+	icon = load("res://assets/icons/characters/arcane_warlock.png")
+	portrait = load("res://assets/icons/characters/arcane_warlock.png")
 
 	# 基础属性 - 低生命低防御，高法力高暴击
 	base_health = 60.0

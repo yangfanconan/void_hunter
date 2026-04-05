@@ -325,7 +325,17 @@ func get_character_portrait(character_id: String) -> ImageTexture:
 	if _character_portraits.has(character_id):
 		return _character_portraits[character_id]
 
-	var path := "res://assets/sprites/characters/%s/portrait.png" % character_id
+	# 优先从 icons/characters 目录加载
+	var path := "res://assets/icons/characters/%s.png" % character_id
+	if ResourceLoader.exists(path):
+		var img := _load_image(path)
+		if img:
+			var portrait := ImageTexture.create_from_image(img)
+			_character_portraits[character_id] = portrait
+			return portrait
+
+	# 后备路径：sprites/characters
+	path = "res://assets/sprites/characters/%s/portrait.png" % character_id
 	if ResourceLoader.exists(path):
 		var img := _load_image(path)
 		if img:

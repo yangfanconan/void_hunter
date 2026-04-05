@@ -35,6 +35,8 @@ func _init() -> void:
 	character_name = "圣骑士"
 	description = "虔诚的骑士，誓以圣光守护同伴。高生命、高防御，生命高时减伤，生命低时攻击力暴增。"
 	character_type = CharacterBase.CharacterType.DEFENSIVE
+	icon = load("res://assets/icons/characters/holy_paladin.png")
+	portrait = load("res://assets/icons/characters/holy_paladin.png")
 
 	# 基础属性 - 高生命高防御
 	base_health = 130.0

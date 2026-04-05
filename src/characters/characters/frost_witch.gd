@@ -35,6 +35,8 @@ func _init() -> void:
 	character_name = "冰霜女巫"
 	description = "来自北方的神秘女巫，精通冰霜魔法，可冻结一切敌人。攻击有概率冻结敌人，冻结的敌人受到额外伤害。"
 	character_type = CharacterBase.CharacterType.BURST
+	icon = load("res://assets/icons/characters/frost_witch.png")
+	portrait = load("res://assets/icons/characters/frost_witch.png")
 
 	# 基础属性 - 中等偏低血量，高法力
 	base_health = 80.0

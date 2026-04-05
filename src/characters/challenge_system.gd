@@ -189,7 +189,15 @@ func _load_all_characters() -> void:
 		{"id": "berserker", "path": "res://src/characters/characters/berserker.gd"},
 		{"id": "mechanic", "path": "res://src/characters/characters/mechanic.gd"},
 		{"id": "time_walker", "path": "res://src/characters/characters/time_walker.gd"},
-		{"id": "void_hunter", "path": "res://src/characters/characters/void_hunter.gd"}
+		{"id": "void_hunter", "path": "res://src/characters/characters/void_hunter.gd"},
+		{"id": "void_reaper", "path": "res://src/characters/characters/void_reaper.gd"},
+		{"id": "arcane_warlock", "path": "res://src/characters/characters/arcane_warlock.gd"},
+		{"id": "dragon_sage", "path": "res://src/characters/characters/dragon_sage.gd"},
+		{"id": "frost_witch", "path": "res://src/characters/characters/frost_witch.gd"},
+		{"id": "holy_paladin", "path": "res://src/characters/characters/holy_paladin.gd"},
+		{"id": "mech_engineer", "path": "res://src/characters/characters/mech_engineer.gd"},
+		{"id": "night_ranger", "path": "res://src/characters/characters/night_ranger.gd"},
+		{"id": "thunder_lord", "path": "res://src/characters/characters/thunder_lord.gd"}
 	]
 
 	for char_info in character_scripts:
@@ -204,7 +212,9 @@ func _initialize_character_clear_counts() -> void:
 	"""初始化角色通关计数"""
 	var all_character_ids: Array = [
 		"wandering_swordsman", "shadow_assassin", "holy_knight",
-		"elemental_mage", "berserker", "mechanic", "time_walker", "void_hunter"
+		"elemental_mage", "berserker", "mechanic", "time_walker", "void_hunter",
+		"void_reaper", "arcane_warlock", "dragon_sage", "frost_witch",
+		"holy_paladin", "mech_engineer", "night_ranger", "thunder_lord"
 	]
 
 	for char_id in all_character_ids:

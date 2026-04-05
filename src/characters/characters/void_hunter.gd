@@ -23,6 +23,8 @@ func _init() -> void:
 	character_name = "虚空猎手"
 	description = "从虚空深处归来的神秘存在，融合了所有英雄的力量，是真正的终极猎手。"
 	character_type = CharacterBase.CharacterType.ALL_ROUNDER
+	icon = load("res://assets/icons/characters/void_hunter.png")
+	portrait = load("res://assets/icons/characters/void_hunter.png")
 
 	# 基础属性 - 全面强大
 	base_health = 110.0

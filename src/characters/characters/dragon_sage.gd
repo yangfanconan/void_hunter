@@ -35,8 +35,10 @@ var _scale_armor_timer: float = 0.0
 func _init() -> void:
 	character_id = "dragon_sage"
 	character_name = "龙智者"
-	description = "远古龙族的贤者，拥有均衡的全属性和强力的成长潜力。升级时全属性+8%，被击中时有概率释放龙息。"
+	description = "远古龙族的贤者，拥有均衡的全属性和强力的成长潜力。升级时全属性 +8%，被击中时有概率释放龙息。"
 	character_type = CharacterBase.CharacterType.BALANCED
+	icon = load("res://assets/icons/characters/dragon_sage.png")
+	portrait = load("res://assets/icons/characters/dragon_sage.png")
 
 	# 基础属性 - 均衡偏防御
 	base_health = 100.0

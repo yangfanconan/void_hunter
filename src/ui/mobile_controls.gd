@@ -47,6 +47,8 @@ var _controls_visible: bool = true
 func _ready() -> void:
 	layer = 5  # 较低的层级，技能选择面板在更高层
 	_create_ui()
+	# 默认隐藏，只有在游戏开始时才显示
+	hide_controls()
 
 
 func _create_ui() -> void:

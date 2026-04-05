@@ -23,6 +23,8 @@ func _init() -> void:
 	character_name = "机械师"
 	description = "精通机械工程的天才发明家，能够制造各种自动化装置辅助战斗。"
 	character_type = CharacterBase.CharacterType.SUMMONER
+	icon = load("res://assets/icons/characters/mechanic.png")
+	portrait = load("res://assets/icons/characters/mechanic.png")
 
 	# 基础属性 - 中等属性
 	base_health = 90.0

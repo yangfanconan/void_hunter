@@ -367,6 +367,10 @@ func _show_main_menu() -> void:
 	_hud.visible = false
 	_pause_menu.visible = false
 	current_state = GameState.MAIN_MENU
+	# 隐藏移动控制
+	var mc = _get_mobile_controls()
+	if mc and mc.has_method("hide_controls"):
+		mc.hide_controls()
 
 
 func _start_game() -> void:
@@ -412,7 +416,12 @@ func _start_game() -> void:
 	# 设置游戏状态
 	current_state = GameState.PLAYING
 	game_started.emit()
-	
+
+	# 显示移动控制
+	var mc = _get_mobile_controls()
+	if mc and mc.has_method("show_controls"):
+		mc.show_controls()
+
 	print("[Game] 游戏开始完成")
 
 
@@ -761,6 +770,13 @@ func _get_leaderboard_manager() -> Node:
 	"""安全获取LeaderboardManager"""
 	if get_tree() and get_tree().root:
 		return get_tree().root.get_node_or_null("LeaderboardManager")
+	return null
+
+
+func _get_mobile_controls() -> Node:
+	"""安全获取MobileControls"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("MobileControls")
 	return null
 
 
