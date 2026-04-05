@@ -976,11 +976,36 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	content.add_theme_constant_override("margin_bottom", 8)
 	background.add_child(content)
 
-	# 角色图标占位
-	var icon_placeholder = ColorRect.new()
-	icon_placeholder.color = Color(0.35, 0.35, 0.5)
-	icon_placeholder.custom_minimum_size = Vector2(60, 60)
-	content.add_child(icon_placeholder)
+	# 角色图标 - 使用SpriteManager获取玩家精灵
+	var icon_rect = TextureRect.new()
+	icon_rect.name = "IconRect"
+	icon_rect.custom_minimum_size = Vector2(64, 64)
+	icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+
+	# 尝试从SpriteManager获取角色头像
+	var sprite_mgr = _get_sprite_manager()
+	var has_texture := false
+	if sprite_mgr:
+		var portrait = sprite_mgr.get_character_portrait(char_data["id"])
+		if portrait:
+			icon_rect.texture = portrait
+			has_texture = true
+		else:
+			# 后备：使用玩家精灵的第一帧
+			var player_frame = sprite_mgr.get_player_frame(0)
+			if player_frame:
+				icon_rect.texture = player_frame
+				has_texture = true
+
+	if has_texture:
+		content.add_child(icon_rect)
+	else:
+		# 没有纹理时使用颜色占位符
+		var icon_placeholder = ColorRect.new()
+		icon_placeholder.color = _get_character_color(char_data["type"])
+		icon_placeholder.custom_minimum_size = Vector2(64, 64)
+		content.add_child(icon_placeholder)
 
 	# 角色名称
 	var name_lbl: Label = Label.new()
@@ -1017,3 +1042,23 @@ func _create_default_card(char_data: Dictionary) -> Control:
 	card.gui_input.connect(_on_card_gui_input.bind(char_data["id"]))
 
 	return card
+
+
+## 获取SpriteManager
+func _get_sprite_manager() -> Node:
+	"""安全获取SpriteManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("SpriteManager")
+	return null
+
+
+## 根据角色类型获取颜色
+func _get_character_color(type: String) -> Color:
+	"""根据角色类型返回不同的颜色"""
+	match type:
+		"近战": return Color(0.8, 0.3, 0.3)  # 红色
+		"法师": return Color(0.3, 0.5, 0.8)  # 蓝色
+		"远程": return Color(0.3, 0.7, 0.4)  # 绿色
+		"刺客": return Color(0.5, 0.2, 0.6)  # 紫色
+		"坦克": return Color(0.6, 0.5, 0.3)  # 橙色
+		_: return Color(0.4, 0.4, 0.5)       # 默认灰色
