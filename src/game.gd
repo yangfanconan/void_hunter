@@ -216,12 +216,14 @@ func handle_player_death() -> void:
 	AudioManager.play_sfx("game_over")
 
 	# 结束成就系统会话并提交记录
-	if AchievementManager:
-		AchievementManager.record_survival_time(game_time)
-		AchievementManager.end_session()
+	var am = _get_achievement_manager()
+	if am:
+		am.record_survival_time(game_time)
+		am.end_session()
 
 	# 提交排行榜记录
-	if LeaderboardManager:
+	var lm = _get_leaderboard_manager()
+	if lm:
 		var player_name: String = "玩家"  # 可以从设置中获取
 		var stats := {
 			"game_time": game_time,
@@ -230,7 +232,7 @@ func handle_player_death() -> void:
 			"damage_dealt": _total_damage_dealt,
 			"items_collected": _items_collected,
 		}
-		LeaderboardManager.submit_game_record(player_name, stats)
+		lm.submit_game_record(player_name, stats)
 
 	# 显示游戏结束界面
 	_show_game_over()
@@ -388,8 +390,9 @@ func _start_game() -> void:
 		_game_over_screen.hide()
 
 	# 开始成就系统会话
-	if AchievementManager:
-		AchievementManager.start_session()
+	var am_start = _get_achievement_manager()
+	if am_start:
+		am_start.start_session()
 
 	# 播放游戏开始音效
 	AudioManager.play_sfx("wave_start")
@@ -744,6 +747,20 @@ func _get_save_manager() -> Node:
 	"""安全获取SaveManager"""
 	if get_tree() and get_tree().root:
 		return get_tree().root.get_node_or_null("SaveManager")
+	return null
+
+
+func _get_achievement_manager() -> Node:
+	"""安全获取AchievementManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("AchievementManager")
+	return null
+
+
+func _get_leaderboard_manager() -> Node:
+	"""安全获取LeaderboardManager"""
+	if get_tree() and get_tree().root:
+		return get_tree().root.get_node_or_null("LeaderboardManager")
 	return null
 
 
@@ -1133,8 +1150,9 @@ func _on_wave_completed(wave_number: int) -> void:
 	AudioManager.play_sfx("wave_complete", 0.8)
 
 	# 通知成就系统
-	if AchievementManager:
-		AchievementManager.record_wave(wave_number)
+	var am_wave = _get_achievement_manager()
+	if am_wave:
+		am_wave.record_wave(wave_number)
 
 
 func _on_enemy_spawned(enemy: Node) -> void:
@@ -1152,7 +1170,8 @@ func _on_enemy_died(killer: Node, enemy: Node) -> void:
 		gm.record_enemy_kill()
 
 	# 通知成就系统
-	if AchievementManager:
+	var am_kill = _get_achievement_manager()
+	if am_kill:
 		var enemy_type: String = "normal"
 		if enemy.has_method("get_enemy_type"):
 			enemy_type = enemy.get_enemy_type()
@@ -1161,7 +1180,7 @@ func _on_enemy_died(killer: Node, enemy: Node) -> void:
 			match type_value:
 				3: enemy_type = "elite"
 				4: enemy_type = "boss"
-		AchievementManager.record_kill(enemy_type)
+		am_kill.record_kill(enemy_type)
 
 	# V2: 通知连击系统
 	if system_integrator:
