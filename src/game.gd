@@ -131,8 +131,8 @@ func _initialize_ui_components() -> void:
 		if _skill_selection.has_signal("selection_skipped"):
 			_skill_selection.selection_skipped.connect(_on_skill_selection_skipped)
 
-	# 查找角色选择界面
-	_character_select = _main_menu.get_node_or_null("CharacterSelect")
+	# 查找角色选择界面 - 现在是CanvasLayer下的独立节点
+	_character_select = get_node_or_null("CanvasLayer/CharacterSelect")
 	if _character_select:
 		# 连接角色选择信号
 		if _character_select.has_signal("character_selected"):
