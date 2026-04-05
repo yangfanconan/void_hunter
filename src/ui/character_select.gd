@@ -146,22 +146,26 @@ func _build_full_ui() -> void:
 	bg.z_index = -1
 	add_child(bg)
 
-	# 主容器 - 使用 MarginContainer 包裹
-	var margin = MarginContainer.new()
-	margin.name = "MainMargin"
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
-	add_child(margin)
+	# 主容器 - 垂直布局（上：内容，下：按钮）
+	var main_vbox = VBoxContainer.new()
+	main_vbox.name = "MainVBox"
+	main_vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	main_vbox.add_theme_constant_override("separation", 0)
+	add_child(main_vbox)
 
-	# 主容器
-	var main_hbox = HBoxContainer.new()
-	main_hbox.name = "MainContainer"
-	main_hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	main_hbox.add_theme_constant_override("separation", 20)
-	margin.add_child(main_hbox)
+	# 内容区域 - 水平布局（左：卡片，右：详情）
+	var content_margin = MarginContainer.new()
+	content_margin.add_theme_constant_override("margin_left", 15)
+	content_margin.add_theme_constant_override("margin_right", 15)
+	content_margin.add_theme_constant_override("margin_top", 15)
+	content_margin.add_theme_constant_override("margin_bottom", 10)
+	content_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	main_vbox.add_child(content_margin)
+
+	var content_hbox = HBoxContainer.new()
+	content_hbox.add_theme_constant_override("separation", 15)
+	content_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_margin.add_child(content_hbox)
 
 	# 左侧：角色网格
 	var left_panel = PanelContainer.new()
@@ -172,31 +176,26 @@ func _build_full_ui() -> void:
 	left_style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
 	left_style.set_corner_radius_all(8)
 	left_panel.add_theme_stylebox_override("panel", left_style)
-	main_hbox.add_child(left_panel)
+	content_hbox.add_child(left_panel)
 
 	var left_margin = MarginContainer.new()
-	left_margin.add_theme_constant_override("margin_left", 15)
-	left_margin.add_theme_constant_override("margin_right", 15)
-	left_margin.add_theme_constant_override("margin_top", 15)
-	left_margin.add_theme_constant_override("margin_bottom", 15)
+	left_margin.add_theme_constant_override("margin_left", 10)
+	left_margin.add_theme_constant_override("margin_right", 10)
+	left_margin.add_theme_constant_override("margin_top", 10)
+	left_margin.add_theme_constant_override("margin_bottom", 10)
 	left_panel.add_child(left_margin)
 
 	var left_vbox = VBoxContainer.new()
-	left_vbox.add_theme_constant_override("separation", 15)
+	left_vbox.add_theme_constant_override("separation", 10)
 	left_margin.add_child(left_vbox)
 
 	# 标题
 	var title = Label.new()
-	title.text = "选择角色"
+	title.text = "👥 选择角色"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	title.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 	left_vbox.add_child(title)
-
-	# 分隔线
-	var sep = HSeparator.new()
-	sep.custom_minimum_size.y = 10
-	left_vbox.add_child(sep)
 
 	# 角色网格容器
 	card_container = GridContainer.new()
@@ -210,36 +209,36 @@ func _build_full_ui() -> void:
 	# 右侧：详情面板
 	detail_panel = PanelContainer.new()
 	detail_panel.name = "DetailPanel"
-	detail_panel.custom_minimum_size = Vector2(320, 0)
+	detail_panel.custom_minimum_size = Vector2(260, 0)
 	detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var right_style = StyleBoxFlat.new()
 	right_style.bg_color = Color(0.12, 0.12, 0.18, 1.0)
 	right_style.set_corner_radius_all(8)
 	detail_panel.add_theme_stylebox_override("panel", right_style)
-	main_hbox.add_child(detail_panel)
+	content_hbox.add_child(detail_panel)
 
 	var detail_margin = MarginContainer.new()
-	detail_margin.add_theme_constant_override("margin_left", 15)
-	detail_margin.add_theme_constant_override("margin_right", 15)
-	detail_margin.add_theme_constant_override("margin_top", 15)
-	detail_margin.add_theme_constant_override("margin_bottom", 15)
+	detail_margin.add_theme_constant_override("margin_left", 12)
+	detail_margin.add_theme_constant_override("margin_right", 12)
+	detail_margin.add_theme_constant_override("margin_top", 12)
+	detail_margin.add_theme_constant_override("margin_bottom", 12)
 	detail_panel.add_child(detail_margin)
 
 	var detail_vbox = VBoxContainer.new()
-	detail_vbox.add_theme_constant_override("separation", 12)
+	detail_vbox.add_theme_constant_override("separation", 8)
 	detail_margin.add_child(detail_vbox)
 
 	# 角色名称
 	name_label = Label.new()
-	name_label.text = "角色名称"
+	name_label.text = "请选择角色"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 22)
-	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.6))
+	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.add_theme_color_override("font_color", Color(1.0, 0.9, 0.5))
 	detail_vbox.add_child(name_label)
 
 	# 角色类型
 	type_label = Label.new()
-	type_label.text = "类型"
+	type_label.text = ""
 	type_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	type_label.add_theme_font_size_override("font_size", 14)
 	type_label.add_theme_color_override("font_color", Color(0.6, 0.8, 1.0))
@@ -251,7 +250,7 @@ func _build_full_ui() -> void:
 
 	# 角色描述
 	description_label = Label.new()
-	description_label.text = "角色描述"
+	description_label.text = "点击左侧卡片选择角色"
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	description_label.add_theme_font_size_override("font_size", 13)
 	description_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
@@ -259,26 +258,27 @@ func _build_full_ui() -> void:
 
 	# 被动技能名称
 	passive_name_label = Label.new()
-	passive_name_label.text = "被动技能"
+	passive_name_label.text = ""
 	passive_name_label.add_theme_font_size_override("font_size", 14)
 	passive_name_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
 	detail_vbox.add_child(passive_name_label)
 
 	# 被动技能描述
 	passive_desc_label = Label.new()
-	passive_desc_label.text = "被动技能描述"
+	passive_desc_label.text = ""
 	passive_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	passive_desc_label.add_theme_font_size_override("font_size", 12)
 	passive_desc_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	detail_vbox.add_child(passive_desc_label)
 
-	# 分隔线
-	var sep3 = HSeparator.new()
-	detail_vbox.add_child(sep3)
+	# 填充空间
+	var spacer = Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	detail_vbox.add_child(spacer)
 
 	# 解锁条件
 	unlock_condition_label = Label.new()
-	unlock_condition_label.text = "解锁条件"
+	unlock_condition_label.text = ""
 	unlock_condition_label.add_theme_font_size_override("font_size", 12)
 	detail_vbox.add_child(unlock_condition_label)
 
@@ -288,69 +288,71 @@ func _build_full_ui() -> void:
 	stats_container.add_theme_constant_override("separation", 5)
 	detail_vbox.add_child(stats_container)
 
-	# 填充空间
-	var spacer = Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	detail_vbox.add_child(spacer)
+	# 底部按钮栏 - 非常醒目
+	var bottom_panel = PanelContainer.new()
+	bottom_panel.name = "BottomPanel"
+	bottom_panel.custom_minimum_size.y = 80
+	var bottom_style = StyleBoxFlat.new()
+	bottom_style.bg_color = Color(0.1, 0.1, 0.15, 1.0)
+	bottom_panel.add_theme_stylebox_override("panel", bottom_style)
+	main_vbox.add_child(bottom_panel)
 
-	# 操作提示
-	var hint_label = Label.new()
-	hint_label.text = "👆 点击左侧卡片选择，然后点击「选择角色」确认"
-	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD
-	hint_label.add_theme_font_size_override("font_size", 12)
-	hint_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.5))
-	detail_vbox.add_child(hint_label)
+	var button_margin = MarginContainer.new()
+	button_margin.add_theme_constant_override("margin_left", 20)
+	button_margin.add_theme_constant_override("margin_right", 20)
+	button_margin.add_theme_constant_override("margin_top", 15)
+	button_margin.add_theme_constant_override("margin_bottom", 15)
+	bottom_panel.add_child(button_margin)
 
-	# 按钮容器
-	var btn_container = HBoxContainer.new()
-	btn_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	btn_container.add_theme_constant_override("separation", 20)
-	detail_vbox.add_child(btn_container)
+	var button_hbox = HBoxContainer.new()
+	button_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	button_hbox.add_theme_constant_override("separation", 40)
+	button_margin.add_child(button_hbox)
 
 	# 返回按钮
 	back_button = Button.new()
-	back_button.text = "返回"
-	back_button.custom_minimum_size = Vector2(100, 45)
-	var back_style = StyleBoxFlat.new()
-	back_style.bg_color = Color(0.25, 0.25, 0.35, 1.0)
-	back_style.border_color = Color(0.5, 0.5, 0.6)
-	back_style.set_border_width_all(2)
-	back_style.set_corner_radius_all(8)
-	back_button.add_theme_stylebox_override("normal", back_style)
-	btn_container.add_child(back_button)
+	back_button.text = "← 返回"
+	back_button.custom_minimum_size = Vector2(120, 50)
+	var back_btn_style = StyleBoxFlat.new()
+	back_btn_style.bg_color = Color(0.3, 0.3, 0.4, 1.0)
+	back_btn_style.border_color = Color(0.5, 0.5, 0.6)
+	back_btn_style.set_border_width_all(2)
+	back_btn_style.set_corner_radius_all(10)
+	back_button.add_theme_stylebox_override("normal", back_btn_style)
+	back_button.add_theme_font_size_override("font_size", 16)
+	button_hbox.add_child(back_button)
 
-	# 选择按钮 - 突出显示
+	# 选择按钮 - 非常醒目的大按钮
 	select_button = Button.new()
-	select_button.text = "请选择角色"
-	select_button.custom_minimum_size = Vector2(140, 50)
-	# 正常状态 - 明亮的绿色
-	var select_normal = StyleBoxFlat.new()
-	select_normal.bg_color = Color(0.2, 0.5, 0.3, 1.0)
-	select_normal.border_color = Color(0.3, 0.8, 0.5)
-	select_normal.set_border_width_all(3)
-	select_normal.set_corner_radius_all(10)
-	select_button.add_theme_stylebox_override("normal", select_normal)
+	select_button.text = "✓ 确认选择角色"
+	select_button.custom_minimum_size = Vector2(200, 50)
+	# 启用状态 - 醒目的绿色
+	var select_enabled = StyleBoxFlat.new()
+	select_enabled.bg_color = Color(0.2, 0.6, 0.3, 1.0)
+	select_enabled.border_color = Color(0.4, 0.9, 0.5)
+	select_enabled.set_border_width_all(3)
+	select_enabled.set_corner_radius_all(12)
+	select_button.add_theme_stylebox_override("normal", select_enabled)
 	# 悬停状态
 	var select_hover = StyleBoxFlat.new()
-	select_hover.bg_color = Color(0.3, 0.6, 0.4, 1.0)
-	select_hover.border_color = Color(0.5, 1.0, 0.7)
+	select_hover.bg_color = Color(0.3, 0.7, 0.4, 1.0)
+	select_hover.border_color = Color(0.5, 1.0, 0.6)
 	select_hover.set_border_width_all(3)
-	select_hover.set_corner_radius_all(10)
+	select_hover.set_corner_radius_all(12)
 	select_button.add_theme_stylebox_override("hover", select_hover)
 	select_button.add_theme_stylebox_override("pressed", select_hover)
-	# 禁用状态
+	# 禁用状态 - 灰色
 	var select_disabled = StyleBoxFlat.new()
-	select_disabled.bg_color = Color(0.3, 0.3, 0.3, 1.0)
-	select_disabled.border_color = Color(0.4, 0.4, 0.4)
+	select_disabled.bg_color = Color(0.35, 0.35, 0.35, 1.0)
+	select_disabled.border_color = Color(0.45, 0.45, 0.45)
 	select_disabled.set_border_width_all(2)
-	select_disabled.set_corner_radius_all(10)
+	select_disabled.set_corner_radius_all(12)
 	select_button.add_theme_stylebox_override("disabled", select_disabled)
-	select_button.add_theme_font_size_override("font_size", 16)
+	select_button.add_theme_font_size_override("font_size", 18)
 	select_button.add_theme_color_override("font_color", Color.WHITE)
 	select_button.add_theme_color_override("font_disabled_color", Color(0.6, 0.6, 0.6))
-	select_button.disabled = true  # 初始禁用
-	btn_container.add_child(select_button)
+	select_button.disabled = true
+	button_hbox.add_child(select_button)
 
 	print("[CharacterSelect] UI构建完成")
 
