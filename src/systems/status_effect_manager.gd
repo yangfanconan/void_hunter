@@ -387,7 +387,7 @@ func _apply_knockback(target: Node, effect: StatusEffect) -> void:
 		var source_pos := Vector2.ZERO
 		if effect.source and is_instance_valid(effect.source):
 			source_pos = effect.source.global_position
-		var direction: Variant = (target.global_position - source_pos).normalized()
+		var direction := (target.global_position - source_pos).normalized()
 		target.knockback(direction, effect.magnitude)
 
 func _apply_launch(target: Node, effect: StatusEffect) -> void:
